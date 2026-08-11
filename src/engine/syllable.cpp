@@ -51,11 +51,13 @@ char16_t StripDiacritic(char16_t c) {
     }
 }
 
-std::u16string Strip(const std::u16string& s) {
-    std::u16string out;
-    out.reserve(s.size());
-    for (char16_t c : s) out.push_back(StripDiacritic(c));
-    return out;
+// True when a letter already typed could still turn into `target`. A plain a/e/o/u
+// may yet receive its diacritic, but a letter that already has one is final:
+// "ie" is on its way to "iê", while "ôe" is on its way to nothing at all.
+bool CanBecome(char16_t typed, char16_t target) {
+    if (typed == target) return true;
+    const bool typedIsPlain = (StripDiacritic(typed) == typed);
+    return typedIsPlain && StripDiacritic(target) == typed;
 }
 
 bool IsPrefix(const std::u16string& prefix, const std::u16string& full) {
@@ -89,12 +91,16 @@ bool NucleusOk(const std::u16string& nucleus, bool strict) {
         }
         return false;
     }
-    // While typing, diacritics arrive after the letters they belong to: "ie" is
-    // on its way to "iê", "uo" to "uô" or "ươ". Compare with diacritics removed
-    // and allow any prefix.
-    const std::u16string bare = Strip(nucleus);
+    // While typing, diacritics arrive after the letters they belong to, so accept
+    // anything that is still on its way to a real nucleus.
     for (const char16_t* n : kNuclei) {
-        if (IsPrefix(bare, Strip(std::u16string(n)))) return true;
+        const std::u16string full(n);
+        if (nucleus.size() > full.size()) continue;
+        bool ok = true;
+        for (size_t i = 0; i < nucleus.size() && ok; ++i) {
+            ok = CanBecome(nucleus[i], full[i]);
+        }
+        if (ok) return true;
     }
     return false;
 }

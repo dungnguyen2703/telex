@@ -22,8 +22,8 @@ void Shutdown(HWND hwnd) {
         UnhookWinEvent(g_winEvent);
         g_winEvent = nullptr;
     }
-    KillTimer(hwnd, kTimerId);
     RemoveHooks();
+    StopExclusionWorker();
     DestroyTrayIcon();
 }
 
@@ -44,11 +44,6 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 
         case kRefreshTrayMessage:
             UpdateTrayIcon();
-            return 0;
-
-        case WM_TIMER:
-            // Picks up edits to exclude.txt without needing a window switch.
-            if (wParam == kTimerId) RefreshExclusion();
             return 0;
 
         case WM_QUERYENDSESSION:
@@ -124,8 +119,7 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int) {
     app::g_winEvent = SetWinEventHook(EVENT_SYSTEM_FOREGROUND, EVENT_SYSTEM_FOREGROUND,
                                       nullptr, app::WinEventProc, 0, 0,
                                       WINEVENT_OUTOFCONTEXT | WINEVENT_SKIPOWNPROCESS);
-    SetTimer(hwnd, app::kTimerId, app::kTimerPeriodMs, nullptr);
-    app::RefreshExclusion();
+    app::StartExclusionWorker();
 
     MSG msg;
     while (GetMessageW(&msg, nullptr, 0, 0) > 0) {

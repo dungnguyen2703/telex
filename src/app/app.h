@@ -17,9 +17,6 @@ constexpr UINT kTrayMessage = WM_APP + 1;
 // Posted by the hook so the tray icon is refreshed from the message loop and
 // never from inside the hook callback (docs/DESIGN.md, pitfall 2).
 constexpr UINT kRefreshTrayMessage = WM_APP + 2;
-constexpr UINT kTimerId = 1;
-constexpr UINT kTimerPeriodMs = 1000;
-
 constexpr wchar_t kMutexName[] = L"Local\\telex-single-instance";
 constexpr wchar_t kWindowClass[] = L"TelexHiddenWindow";
 
@@ -49,8 +46,11 @@ void UpdateTrayIcon();
 void ShowTrayMenu(HWND owner);
 
 // --- exclusion.cpp ---------------------------------------------------------
-// Recomputes "is the foreground window excluded", reloading exclude.txt if it
-// changed. Never called from inside the keyboard hook.
+// The list is watched by a background thread; the hook only ever reads the flag
+// it publishes. File and process queries must not run on the hook's thread.
+bool StartExclusionWorker();
+void StopExclusionWorker();
+// Asks the worker to look again now instead of waiting for its next poll.
 void RefreshExclusion();
 bool IsExcluded();
 void OpenExclusionFile();

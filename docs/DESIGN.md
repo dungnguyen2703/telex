@@ -118,6 +118,12 @@ user presses a key
    Explorer and blocks long enough to lose the next few keystrokes, so toggling
    only flips a flag and posts `kRefreshTrayMessage` for the message loop to
    handle. This was a real bug caught by the tier 2 tests, not a theoretical one.
+   It applies to the whole thread, not just the callback: anything slow running
+   in the message loop delays hook delivery just as badly. Watching `exclude.txt`
+   used to sit on a one-second timer here, and because the file can live in a
+   cloud-synced folder, a single slow `GetFileAttributesEx` was enough to lose a
+   keystroke — which the user sees as a word that randomly failed to take its
+   tone mark. It now runs on its own thread.
 3. **Backspace/character ordering.** Send everything in **one** `SendInput` call
    with a single array, never several calls. Chrome and Electron apps mis-order
    the events otherwise.
@@ -151,12 +157,13 @@ user presses a key
   and lines starting with `#` are ignored. Case-insensitive comparison against
   the file name only (`code.exe`), never the full path.
 - A missing file means an empty list — not an error.
-- Reloaded when its modification time changes, checked on every window switch
-  and on a one-second timer. The timer is what makes "save the file and it
-  applies" true even when the foreground never changes. No directory watcher, no
-  restart required.
-- Whether the current window is excluded is computed **once** per foreground
-  change and stored in an `std::atomic<bool>`; the hook only reads that flag.
+- A dedicated worker thread owns the list. It polls once a second, and the
+  foreground WinEvent signals it to look again immediately. Polling is what makes
+  "save the file and it applies" true even when the foreground never changes. No
+  directory watcher, no restart required.
+- The worker publishes a single `std::atomic<bool>`; the hook only reads that
+  flag. Nothing that touches the disk or another process may run on the thread
+  that owns the hook.
 - Exclusion does not change the ON/OFF state. Leaving the app resumes typing
   immediately.
 

@@ -63,7 +63,16 @@ LRESULT CALLBACK KeyboardProc(int code, WPARAM wParam, LPARAM lParam) {
     }
 
     if (!down) return CallNextHookEx(nullptr, code, wParam, lParam);
-    if (!IsEnabled() || IsExcluded()) {
+
+    // Keys typed while we were standing aside never reached the engine, so what
+    // it remembers about the text is no longer true.
+    static bool wasExcluded = false;
+    const bool excluded = IsExcluded();
+    if (excluded != wasExcluded) {
+        wasExcluded = excluded;
+        g_engine.Reset();
+    }
+    if (!IsEnabled() || excluded) {
         return CallNextHookEx(nullptr, code, wParam, lParam);
     }
 
@@ -77,14 +86,23 @@ LRESULT CALLBACK KeyboardProc(int code, WPARAM wParam, LPARAM lParam) {
         return CallNextHookEx(nullptr, code, wParam, lParam);
     }
 
-    if (IsBoundaryKey(key->vkCode) || key->vkCode == VK_SPACE) {
+    if (key->vkCode == VK_SPACE) {
+        g_engine.EndWord(u' ');
+        return CallNextHookEx(nullptr, code, wParam, lParam);
+    }
+
+    if (IsBoundaryKey(key->vkCode)) {
+        // The caret is going somewhere we cannot follow; forget the text too.
         g_engine.Reset();
         return CallNextHookEx(nullptr, code, wParam, lParam);
     }
 
     if (key->vkCode < 'A' || key->vkCode > 'Z') {
-        // Digits, punctuation, function keys: all end the current word.
-        g_engine.Reset();
+        // Digits, punctuation, function keys: they end the word, but the caret
+        // stays put, so backspacing back into what we typed still works. Which
+        // character it was does not matter - anything that is not a letter ends
+        // a word just the same.
+        g_engine.EndWord(0);
         return CallNextHookEx(nullptr, code, wParam, lParam);
     }
 

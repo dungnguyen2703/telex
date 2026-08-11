@@ -72,13 +72,7 @@ std::u16string Type(const std::string& keys) {
             if (!screen.empty()) screen.pop_back();
             continue;
         }
-        const bool letter = (ch >= u'a' && ch <= u'z') || (ch >= u'A' && ch <= u'Z');
-        if (!letter) {
-            engine.Reset();
-            screen.push_back(ch);
-            continue;
-        }
-        const telex::Result r = engine.OnKey(ch);
+        const telex::Result r = engine.OnKey(ch);  // non-letters end the word
         if (r.action == telex::Action::PassThrough) {
             screen.push_back(ch);
         } else {
@@ -270,6 +264,99 @@ void RunFreePosition() {
     CHECK("hoanf", "hoàn");
     CHECK("tieengs", "tiếng");
     CHECK("tiengs", "tiéng");
+
+    // Type the whole word first, put the marks on afterwards. This is how most
+    // people actually type, and every one of these came from a real session.
+    CHECK("vanas", "vấn");
+    CHECK("vanas ddeef", "vấn đề");
+    CHECK("quanaf", "quần");
+    CHECK("thayas", "thấy");
+    CHECK("danhs", "dánh");
+    CHECK("danhas", "dấnh");
+    CHECK("ddanhs", "đánh");
+    CHECK("nguoiwf", "người");
+    CHECK("duocwj", "dược");
+    CHECK("dduocwj", "được");
+    CHECK("dduowcj", "được");
+    CHECK("chungs", "chúng");
+    CHECK("chungs ta", "chúng ta");
+    CHECK("khongo", "không");
+    CHECK("congoj", "cộng");
+    CHECK("muonos", "muốn");
+    CHECK("tienes", "tiến");
+    CHECK("nguyeenj", "nguyện");
+    CHECK("nguyenej", "nguyện");
+    CHECK("truongwf", "trường");
+    CHECK("ngoeor", "ngoẻo");
+    CHECK("khoeof", "khoèo");
+    CHECK("xooong", "xoong");
+    // Undo only counts straight after the key that applied the mark, so this
+    // trailing e is just a letter that does not belong to the syllable.
+    CHECK("vieete", "vieete");
+    // Adding a letter that cannot belong to the syllable puts the word back.
+    CHECK("chungso", "chungso");
+}
+
+// đ is the letter people report problems with most, so it gets its own group.
+void RunDStroke() {
+    CHECK("dd", "đ");
+    CHECK("ddanf", "đàn");
+    CHECK("dandf", "đàn");       // free position, mark typed after the word
+    CHECK("ddaji", "đại");
+    CHECK("dajid", "đại");
+    CHECK("ddoongf", "đồng");
+    CHECK("doongdf", "đồng");
+    CHECK("ddepj", "đẹp");
+    CHECK("depjd", "đẹp");
+    CHECK("dduongwf", "đường");
+    CHECK("dduwowngf", "đường");
+    CHECK("duongwdf", "đường");
+    CHECK("ddi", "đi");
+    CHECK("did", "đi");
+    CHECK("ddeef", "đề");
+    CHECK("Ddanhs", "Đánh");
+    CHECK("DDanhs", "Đánh");
+    // The word already had its đ; a stray d at the end cannot belong to it.
+    CHECK("ddand", "ddand");
+    // Known mangling: English words where the first letter is also a d.
+    CHECK("dad", "đa");
+    CHECK("handed", "handed");
+    CHECK("addd", "addd");
+}
+
+// Typing, deleting part of it, then carrying on: the engine has to stay in step
+// with what is actually on screen.
+void RunBackspaceThenContinue() {
+    CHECK("tieengs\b\bng", "tiếng");
+    CHECK("vieejt\bt", "việt");
+    CHECK("hoaf\bn", "hòn");
+    CHECK("hoaf\b\bas", "há");
+    // The đ survives: a backspace stands between it and this d, so the d no
+    // longer counts as retyping.
+    CHECK("ddi\bda", "đda");
+    CHECK("nguwowif\b\bowif", "người");
+    // Putting the mark back after a backspace must not strip it instead.
+    CHECK("tieengs\bs", "tiến");
+    CHECK("tieengs\bgs", "tiếng");
+    CHECK("quanaf\bf", "quầ");
+    CHECK("thayas\bs", "thấ");
+    CHECK("hoangf\bgf", "hoàng");
+    CHECK("ngoaif\bif", "ngoài");
+    CHECK("dduongwf\bf", "đườn");
+    // Pressing it a second time still removes it.
+    CHECK("tieengs\bss", "tiêns");
+    CHECK("banj\b\bans", "bán");
+    CHECK("khoong\b\bng", "không");
+    // The â was deleted, so the retyped vowel is a plain a.
+    CHECK("vanas\b\bans", "ván");
+    CHECK("cuar\baf", "cùa");
+    CHECK("aas\b\baas", "ấ");
+    // Text the user has already seen and kept is never rewritten afterwards.
+    CHECK("ddanf\b\bnf", "đnf");
+    CHECK("ddanf\b\b", "đ");
+    // Marks still work on what is left after deleting.
+    CHECK("dduongwf\b\b\bngf", "đừng");
+    CHECK("ddaji\bof", "đào");
 }
 
 void RunTonePlacement() {
@@ -342,9 +429,33 @@ void RunBackspace() {
     CHECK("ddi\b", "đ");
     CHECK("ddi\b\b", "");
     CHECK("dd\bd", "d");
-    CHECK("tieengs\bs", "tiêns");
+    CHECK("tieengs\bs", "tiến");
     CHECK("as\bs", "s");
     CHECK("\bas", "á");
+}
+
+// Backspacing back over a space into a word that was finished a while ago. The
+// engine has to adopt that word again instead of treating it as untouchable
+// text, otherwise "vay" + a comes out as "vaya" instead of vây.
+void RunBackspaceAcrossWords() {
+    CHECK("vay roi\b\b\b\ba", "vây");
+    CHECK("vay roi di\b\b\b\b\b\b\ba", "vây");
+    CHECK("vay\b\b\bvaya", "vây");
+    CHECK("tieeng viet\b\b\b\b\bs", "tiếng");
+    CHECK("hoa binh\b\b\b\b\bf", "hòa");
+    CHECK("con nguoi\b\b\b\b\b\bf", "còn");
+    CHECK("dang lam\b\b\b\bd", "đang");
+    CHECK("nha cua\b\b\b\bf", "nhà");
+    CHECK("mua ban\b\b\b\bw", "mưa");
+    CHECK("muaw", "mưa");
+    // Two words back, with punctuation rather than a space in between.
+    CHECK("hoa,binh\b\b\b\b\bf", "hòa");
+    CHECK("mot 123\b\b\b\bj", "mọt");
+    // Marks that were already applied survive the round trip.
+    CHECK("tieengs vieejt\b\b\b\b\b ok", "tiếng ok");
+    CHECK("dduongwf xa\b\b\bs", "đướng");
+    // A word we never typed is not ours to touch.
+    CHECK("\b\b\ba", "a");
 }
 
 void RunWordBoundaries() {
@@ -445,6 +556,9 @@ int main(int argc, char** argv) {
     RunLetterTransforms();
     RunUndo();
     RunFreePosition();
+    RunDStroke();
+    RunBackspaceThenContinue();
+    RunBackspaceAcrossWords();
     RunTonePlacement();
     RunEnglishWords();
     RunCapitalisation();

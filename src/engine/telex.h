@@ -33,6 +33,15 @@ public:
     // Non-letters end the current word and always pass through.
     Result OnKey(char16_t ch);
     Result OnBackspace();
+
+    // Ends the current word but remembers the text, so that backspacing back
+    // into it can pick up where the user left off. `ch` is the character that
+    // ended it, or 0 when the platform layer does not know which one it was.
+    void EndWord(char16_t ch);
+
+    // Forgets everything, including the text before the caret. For anything that
+    // moves the caret somewhere we cannot follow: clicks, arrow keys, a new
+    // window (docs/TELEX.md 7).
     void Reset();
 
     // What the word being typed currently looks like on screen.
@@ -49,17 +58,27 @@ private:
     void PushPlain(char16_t ch);
     void ExpandLetter(size_t index);
     void MaybeRevert();
+    void TakeWordFromHistory();
     bool HasVowel() const;
     Result Diff(const std::u16string& before, char16_t typed) const;
 
-    bool TryTone(char16_t ch);
-    bool TryDd(char16_t ch);
-    bool TryW(char16_t ch);
-    bool TryCircumflex(char16_t ch);
+    bool TryTone(char16_t ch, char16_t previousTransform);
+    bool TryDd(char16_t ch, char16_t previousTransform);
+    bool TryW(char16_t ch, char16_t previousTransform);
+    bool TryCircumflex(char16_t ch, char16_t previousTransform);
 
     std::vector<Letter> letters_;
     std::u16string raw_;
-    bool dead_ = false;  // word reverted to literal text; pass everything through
+    // Text we have already put on screen before the current word, kept only so
+    // that backspacing back into it can rebuild the word being edited. Dropped
+    // the moment we can no longer be sure what is in front of the caret.
+    std::u16string history_;
+    bool dead_ = false;    // word reverted to literal text; pass everything through
+    bool edited_ = false;  // backspace was used; never rewrite the whole word again
+    // The key that applied the transform currently on screen, or 0. Retyping a
+    // key only undoes it when it comes straight after, so that adding a mark
+    // back after a backspace is not mistaken for removing it.
+    char16_t lastTransform_ = 0;
 };
 
 }  // namespace telex

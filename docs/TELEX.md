@@ -50,9 +50,17 @@ applies to the nucleus of the syllable being typed.
 - `w` tries the `uo` → `ươ` cluster before single vowels, and never touches the
   `u` of a `qu` onset (`quowr` → quở, not quưở).
 
-The doubling keys `aa`, `ee`, `oo` and `dd` only apply to the letter
-**immediately before** them. Reaching further back would break syllables that
-legitimately repeat a vowel later on (`ngoeor` → ngoẻo, not ngổe).
+The doubling keys work at a distance too, because most people type the whole
+word and add the marks afterwards:
+
+- `vanas` → vấn, `quanaf` → quần, `thayas` → thấy, `tienes` → tiến
+- `dandf` → đàn, `danhsd` → đánh. đ is always the onset, so only the first
+  letter can become one.
+
+What keeps this from running wild is the validity check: in `ngoeor` the second
+`o` would have to make the nucleus `ôe`, which no Vietnamese syllable has, so the
+key stays a plain letter and the word comes out as ngoẻo. A letter that already
+carries a diacritic is final — `ô` never counts as an `o` still waiting for one.
 
 ## 3. Retyping to undo
 
@@ -136,15 +144,25 @@ exists.
 
 ## 7. Word boundaries
 
-`Engine.Reset()` — forget `buffer_`/`raw_` and start a new word — on:
+There are two of them, and the difference matters.
 
-- Space, Tab, Enter
+**Ending a word** — start a fresh word but remember the text just typed, so that
+backspacing back into it can pick it up again (section 8):
+
+- Space
 - Any non-letter character (punctuation, digits, symbols)
-- Navigation keys: arrows, Home, End, PageUp/Down, Delete
+
+**Forgetting everything** — the caret has gone somewhere we cannot follow, so
+anything we think we know about the text in front of it is worthless:
+
+- Navigation keys: arrows, Home, End, PageUp/Down, Delete, Enter, Tab, Escape
 - Any chord involving Ctrl / Alt / Win
 - Mouse click
 - Foreground window change
-- Toggling with `Alt + Z`
+- Toggling with `Alt + Z`, or moving into or out of an excluded application
+
+Guessing wrong here means rewriting text the user never touched, so when in
+doubt, forget.
 
 ## 8. Backspace
 
@@ -155,6 +173,20 @@ don't compensate). Never try to reconstruct a diacritic that was deleted. If
 
 When `raw_` is longer than `buffer_` (e.g. `dd` → `đ`), remove all raw keys that
 produced the deleted character, so subsequent typing does not desynchronise.
+
+**Backspacing past the start of a word adopts the previous one.** Someone types
+`vay`, a space, a few more words, then deletes back to `vay` and presses `a`
+expecting vây. That only works if the engine takes the word back, so it keeps the
+last 128 characters it has itself put on screen and rebuilds the word from them -
+splitting each character back into its base letter, its mark and the Telex keys
+that would produce it. The moment we are no longer sure what sits in front of the
+caret (section 7), that memory is dropped.
+
+**Backspace also disables reverting for the rest of the word** (section 6). Once
+the user has deleted something, whatever is left is text they have looked at and
+kept; turning a đ they already accepted back into `dd` under their hands is far
+worse than leaving an odd-looking word alone. Marks still apply as usual:
+`đường` ⌫⌫⌫ `ngf` → đừng.
 
 ## 9. Capitalisation
 

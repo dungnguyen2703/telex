@@ -33,6 +33,9 @@ Required coverage:
 | English words that must survive verbatim (hello, sport, email, world, string…) | 20 |
 | Capitalisation and Caps Lock | 10 |
 | Backspace mid-word, over a diacritic, over `đ` | 8 |
+| Backspace, then carry on typing and marking the word | 12 |
+| Backspace back across a space into an earlier word | 14 |
+| đ in both typing orders, plus what English words it eats | 22 |
 | Word boundaries: space, punctuation, digits | 8 |
 | The full example table in TELEX.md §10 | all |
 
@@ -68,6 +71,10 @@ Required scenarios:
    restarting the app**.
 6. Type `hoas` then Backspace twice → exactly the right characters remain,
    nothing extra, nothing missing.
+6b. Type `vay roi`, delete back to `vay`, press `a` → vây. The word from before
+   the space has to be picked up again.
+6c. Type `tieengs`, delete the g, type `gs` → tiếng. Putting a mark back must not
+   be read as removing it.
 7. Inject 200 characters as fast as possible → every character still correct
    (catches ordering races between real and injected keys).
 8. Type continuously for several seconds, then type one more word → the hook is

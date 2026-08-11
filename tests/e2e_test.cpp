@@ -275,7 +275,9 @@ void ScenarioToggleOn() {
 }
 
 void ScenarioExcluded() {
-    WriteExcludeFile("# test\r\ne2e_test.exe\r\n");
+    // With a description after the name and odd casing, the way the template
+    // file that ships with the app is written.
+    WriteExcludeFile("# test\r\n  E2E_Test.exe   the test harness itself\r\n");
     Pump(1600);  // the app polls the file once a second
     ClearEdit();
     SendKeys("tieengs vieejt");
@@ -294,6 +296,15 @@ void ScenarioBackspace() {
     ClearEdit();
     SendKeys("hoas\b\b");
     Expect("6. backspace over a rewritten word", "h");
+
+    // Back over a finished word, then carry on marking it up.
+    ClearEdit();
+    SendKeys("vay roi\b\b\b\ba");
+    Expect("6b. backspace back into an earlier word", "vây");
+
+    ClearEdit();
+    SendKeys("tieengs\bgs");
+    Expect("6c. putting a mark back after a backspace", "tiếng");
 }
 
 void ScenarioBurst() {
