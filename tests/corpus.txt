@@ -1,0 +1,392 @@
+# Real Vietnamese syllables used as ground truth for the round-trip test.
+# One syllable per line. The test derives the Telex keystrokes from each entry,
+# types them through the engine and requires the original back.
+# Tone placement here is the classic style (hòa, thuỷ) - see docs/TELEX.md 5.
+# Lines starting with # and blank lines are ignored.
+
+# --- single vowel: a
+ba
+bà
+bá
+bả
+bã
+tạ
+cha
+làm
+mát
+bạn
+sách
+tách
+mạch
+thác
+# --- single vowel: ă
+ăn
+cắn
+chằng
+thẳng
+đẵn
+mặn
+sắc
+lặp
+băng
+# --- single vowel: â
+ân
+ấn
+bần
+bẩn
+mẫn
+cận
+tầng
+nhất
+tập
+# --- single vowel: e
+xe
+hè
+lẻ
+kẽ
+mẹ
+béo
+xem
+# --- single vowel: ê
+bê
+bế
+bề
+để
+lễ
+nhện
+đêm
+kết
+# --- single vowel: i
+đi
+kí
+lì
+mĩ
+bị
+tin
+tính
+tình
+xinh
+# --- single vowel: o
+to
+có
+cò
+cỏ
+họ
+con
+đọc
+học
+ngon
+# --- single vowel: ô
+cô
+cố
+cồ
+cổ
+cỗ
+cộ
+không
+hộp
+một
+# --- single vowel: ơ
+cơ
+cớ
+cờ
+cỡ
+cợ
+phở
+lớn
+đơn
+# --- single vowel: u
+cu
+cú
+cù
+củ
+cũ
+cụ
+bút
+hùng
+chung
+# --- single vowel: ư
+cư
+cứ
+cừ
+cử
+cữ
+cự
+thứ
+mừng
+xưng
+# --- single vowel: y
+ly
+lý
+lỳ
+mỹ
+kỵ
+# --- ai
+hai
+hái
+hài
+hải
+hãi
+hại
+mai
+tai
+# --- ao
+cao
+cáo
+cào
+cảo
+não
+gạo
+sao
+# --- au
+sau
+báu
+màu
+cau
+# --- ay
+hay
+máy
+này
+hãy
+chạy
+bay
+# --- âu
+câu
+cấu
+cầu
+cẩu
+mẫu
+hậu
+# --- ây
+đây
+lấy
+đầy
+gậy
+cây
+# --- eo
+heo
+kéo
+mèo
+lẻo
+# --- êu
+kêu
+nếu
+đều
+# --- ia
+bia
+mía
+kìa
+đĩa
+địa
+chia
+# --- iê
+tiên
+tiến
+tiền
+tiễn
+tiện
+việt
+biết
+điểm
+# --- iu
+dịu
+xíu
+rìu
+chịu
+bĩu
+# --- oa
+hoa
+hóa
+hòa
+hỏa
+họa
+toàn
+hoàn
+xoay
+# --- oă
+xoăn
+hoắc
+ngoằn
+# --- oe
+khoe
+khóe
+hòe
+khỏe
+# --- oi
+coi
+nói
+còi
+hỏi
+mỏi
+gọi
+# --- ôi
+tôi
+tối
+tồi
+rỗi
+tội
+# --- ơi
+bơi
+mới
+trời
+ngợi
+# --- ua
+mua
+múa
+mùa
+của
+lụa
+đũa
+# --- uâ
+xuân
+xuất
+tuần
+chuẩn
+thuẫn
+thuận
+# --- uê
+huê
+tuế
+huề
+huệ
+quê
+# --- ui
+vui
+túi
+lùi
+mũi
+lụi
+# --- uô
+buôn
+muốn
+buồn
+chuỗi
+cuộc
+cuốn
+# --- uy
+duy
+thúy
+thủy
+lũy
+tùy
+quy
+quý
+quỳ
+quỷ
+quỹ
+quỵ
+# --- ưa
+chưa
+dừa
+cửa
+giữa
+lựa
+mưa
+# --- ưi
+gửi
+ngửi
+# --- ươ
+đường
+được
+người
+lược
+vườn
+tưởng
+thương
+trường
+# --- ưu
+cưu
+cứu
+lưu
+hữu
+tựu
+# --- yê
+yên
+yến
+chuyên
+truyền
+# --- iêu
+nhiều
+chiếu
+hiểu
+kiểu
+liệu
+điều
+# --- yêu
+yêu
+yếu
+yểu
+# --- oai
+ngoài
+khoái
+thoải
+ngoại
+loại
+# --- oay
+xoáy
+ngoáy
+# --- oeo
+ngoẻo
+khoèo
+# --- uây
+khuây
+khuấy
+# --- uôi
+cuối
+muối
+tuổi
+chuối
+nuôi
+đuối
+# --- uya
+khuya
+# --- uyê
+chuyến
+chuyền
+chuyển
+thuyền
+tuyệt
+quyển
+# --- uyu
+khuỷu
+# --- ươi
+cười
+tươi
+lưới
+mười
+rưỡi
+# --- ươu
+rượu
+hươu
+# --- onsets
+nghe
+nghiêng
+nghĩ
+nghỉ
+ngã
+ngôn
+nhà
+nhỏ
+chó
+chị
+ghi
+ghế
+già
+giá
+giữ
+gì
+giờ
+không
+khó
+phải
+phòng
+thấy
+thành
+trẻ
+trong
+quả
+quán
+đẹp
+đó
+đây
+đường

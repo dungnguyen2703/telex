@@ -42,6 +42,30 @@ thứ — gõ tiếng Việt kiểu Telex, và một phím tắt để bật/t�
 - Không có tùy chọn đổi phím tắt — cố định `Alt + Z`.
 - Không tự khởi động cùng Windows (người dùng tự thêm nếu muốn).
 
+## Giới hạn đã biết
+
+Không giấu, vì chúng là hệ quả trực tiếp của cách bộ gõ Telex hoạt động —
+UniKey cũng vậy:
+
+- **Gõ tiếng Anh bị biến đổi** ở một số từ: `test` → tét, `win` → ưin,
+  `password` → pasword. Đó chính là lý do có danh sách loại trừ.
+- **`Alt + Z` bị nuốt toàn cục**: ứng dụng bên dưới không nhận được tổ hợp này.
+- **Cửa sổ chạy quyền admin không gõ được** nếu telex chạy quyền thường. Đây là
+  giới hạn của Windows, muốn dùng thì chạy telex bằng quyền admin.
+- **Nguyên âm `uơ`** (thuở, huơ) ra thành `ưở`, vì `uo` + `w` luôn được hiểu là
+  `ươ` — vốn phổ biến hơn hàng trăm lần.
+
+## Dùng thử
+
+Cần Visual Studio (bản Community là đủ). Không cần cài thêm gì khác.
+
+```
+build.bat        # tạo build\telex.exe
+build.bat test   # chạy toàn bộ test
+```
+
+Chạy `build\telex.exe`, icon sẽ hiện ở khay hệ thống.
+
 ## Nguyên tắc
 
 Đơn giản là mục tiêu chính, không phải là bước đầu của một chương trình lớn hơn.

@@ -37,7 +37,8 @@ src/
     main.cpp            WinMain, message loop, startup/teardown
     hook.cpp            WH_KEYBOARD_LL, key filtering, key swallowing
     sender.cpp          emits backspaces + Unicode chars via SendInput
-    tray.cpp            Shell_NotifyIcon, context menu, ON/OFF icons
+    tray.cpp            Shell_NotifyIcon, context menu
+    icon.cpp            draws the ON/OFF icons with GDI, no binary assets
     exclusion.cpp       reads exclude.txt, resolves foreground process name
 tests/
   engine_tests.cpp   <- runs against the engine, no Windows needed
@@ -111,17 +112,23 @@ user presses a key
 2. **Low-level hook timeout.** Windows silently unhooks us if the callback
    exceeds `LowLevelHooksTimeout`. No heavy allocation, no I/O, no locks inside
    the hook. Reading `exclude.txt` and resolving process names happens outside
-   the hook (driven by a WinEvent hook on foreground change); the hook only reads
-   a precomputed flag.
+   the hook (driven by a WinEvent hook on foreground change and a one-second
+   timer); the hook only reads a precomputed flag.
+   The same applies to anything the hook triggers: `Shell_NotifyIcon` talks to
+   Explorer and blocks long enough to lose the next few keystrokes, so toggling
+   only flips a flag and posts `kRefreshTrayMessage` for the message loop to
+   handle. This was a real bug caught by the tier 2 tests, not a theoretical one.
 3. **Backspace/character ordering.** Send everything in **one** `SendInput` call
    with a single array, never several calls. Chrome and Electron apps mis-order
    the events otherwise.
 4. **Alt+Z is swallowed globally.** Detect it in the hook and return 1 so the app
    below never sees it. Three easily-missed details: (a) Alt+key arrives as
    `WM_SYSKEYDOWN`, not `WM_KEYDOWN` — handle both; (b) swallow the matching
-   `WM_SYSKEYUP` for `Z` too, so no app sees half a chord; (c) some apps still
-   activate their menu bar when Alt is released — inject a dummy `VK_CONTROL`
-   before the Alt release to cancel it, or accept it if harmless in practice.
+   `WM_SYSKEYUP` for `Z` too, so no app sees half a chord; (c) with the Z
+   swallowed, the focused window sees Alt pressed and released on its own and
+   enters **menu mode** — a modal loop that freezes it until Escape. Injecting a
+   dummy `VK_CONTROL` tap right after the toggle tells Windows the Alt chord was
+   consumed. Not optional: without it the e2e test hangs, and so does Notepad.
 5. **Elevated windows.** A non-elevated process cannot hook input to elevated
    windows. That is a Windows limitation — document it in the README's known
    limitations, do not try to work around it.
@@ -144,8 +151,10 @@ user presses a key
   and lines starting with `#` are ignored. Case-insensitive comparison against
   the file name only (`code.exe`), never the full path.
 - A missing file means an empty list — not an error.
-- Reloaded when its modification time changes, checked on window switch. No
-  directory watcher, no restart required.
+- Reloaded when its modification time changes, checked on every window switch
+  and on a one-second timer. The timer is what makes "save the file and it
+  applies" true even when the foreground never changes. No directory watcher, no
+  restart required.
 - Whether the current window is excluded is computed **once** per foreground
   change and stored in an `std::atomic<bool>`; the hook only reads that flag.
 - Exclusion does not change the ON/OFF state. Leaving the app resumes typing
@@ -153,8 +162,9 @@ user presses a key
 
 ## System tray
 
-- Two icons: ON (bold V) and OFF (dimmed/grey V), embedded in the exe via an
-  `.rc` file. The tooltip states the current mode.
+- Two icons: ON (white **V** on a red rounded square) and OFF (the same shape in
+  grey). Both are drawn with GDI at startup, so the build needs no binary
+  assets. The tooltip states the current mode.
 - Left click toggles ON/OFF. Right click opens a two-item menu: *Open exclusion
   list* (`ShellExecute` on `exclude.txt`, creating a commented template if
   missing) and *Exit*.

@@ -70,8 +70,14 @@ Required scenarios:
    nothing extra, nothing missing.
 7. Inject 200 characters as fast as possible → every character still correct
    (catches ordering races between real and injected keys).
-8. Type continuously for 30 seconds → the hook is still alive (Windows has not
-   dropped it for exceeding the timeout).
+8. Type continuously for several seconds, then type one more word → the hook is
+   still alive (Windows has not dropped it for exceeding the timeout).
+9. Post `WM_CLOSE` → the process exits on its own, meaning the message loop was
+   healthy and the teardown path (unhook, remove the tray icon) ran.
+
+The test program carries a watchdog that kills it, and any surviving telex.exe,
+after two minutes. Injecting global input can wedge if something steals the
+foreground, and a test that hangs is worse than one that fails.
 
 ## Tier 3 — Manual checklist
 

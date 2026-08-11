@@ -37,15 +37,22 @@ position:
 
 ## 2. Free positioning
 
-A transform key applies to the **syllable being typed**; it need not immediately
-follow its target vowel. This is UniKey's default behaviour.
+Tone keys apply to the **whole syllable** and may be typed anywhere after the
+vowel:
 
 - `vieetj` → việt, `vietj` → viẹt, `vieejt` → việt
-- `duongwf` → dường, `dduowngf` → dường (both orders give the same result)
 - `toans` → toán, `hoacj` → hoạc
 
-When several vowels could accept a letter key, pick the **rightmost** one that
-matches. `w` checks the `uo` → `ươ` cluster before considering single vowels.
+`w` also works at a distance, since w is never a Vietnamese letter itself: it
+applies to the nucleus of the syllable being typed.
+
+- `duongwf` → dường, `dduowngf` → dường (both orders give the same result)
+- `w` tries the `uo` → `ươ` cluster before single vowels, and never touches the
+  `u` of a `qu` onset (`quowr` → quở, not quưở).
+
+The doubling keys `aa`, `ee`, `oo` and `dd` only apply to the letter
+**immediately before** them. Reaching further back would break syllables that
+legitimately repeat a vowel later on (`ngoeor` → ngoẻo, not ngổe).
 
 ## 3. Retyping to undo
 
@@ -64,6 +71,10 @@ Typing a **different** tone key replaces the tone and emits nothing:
 `asf` → à, `asx` → ã.
 
 `z` removes the tone. If the syllable carries no tone, `z` is emitted literally.
+
+Because the second key is consumed by the undo, an English word with a doubled
+tone letter loses one of them: `password` → pasword, `miss` → mis. UniKey
+behaves the same way; the exclusion list is the answer.
 
 ## 4. Syllable structure (used for validity checking)
 
@@ -97,10 +108,10 @@ Evaluate in order, stop at the first rule that matches:
 4. If there is a coda, the tone goes on the **last** vowel.
    (`muoons` → **muốn**, `hoafn` → **hoàn**)
 5. Otherwise (open syllable), the tone goes on the **second-to-last** vowel.
-   (`hoaf` → **hòa**, `thuyr` → **thuỷ**, `cuar` → **của**, `mias` → **mía**)
+   (`hoaf` → **hòa**, `thuyr` → **thủy**, `cuar` → **của**, `mias` → **mía**)
 
 Rule 5 is what separates "classic" from "modern" placement. We use classic
-(**hòa**, **thuỷ**), matching UniKey's default. There is no option to change it.
+(**hòa**, **thủy**), matching UniKey's default. There is no option to change it.
 
 ## 6. Reverting invalid syllables
 
@@ -160,7 +171,7 @@ Transform keys preserve the case of the target vowel: `Aa` → Â, `DD` → Đ,
 | `ddaji hocj quoocs gia` | đại học quốc gia |
 | `nguwowif` / `nguoiwf` | người |
 | `khoong cos gif` | không có gì |
-| `thuyr tinh` | thuỷ tinh |
+| `thuyr tinh` | thủy tinh |
 | `hoaf binhf` | hòa bình |
 | `quays` | quáy |
 | `quys` | quý |
