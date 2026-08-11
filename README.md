@@ -55,7 +55,16 @@ UniKey cũng vậy:
 - **Nguyên âm `uơ`** (thuở, huơ) ra thành `ưở`, vì `uo` + `w` luôn được hiểu là
   `ươ` — vốn phổ biến hơn hàng trăm lần.
 
-## Dùng thử
+## Tải về
+
+Bản build sẵn nằm ở [release/telex.exe](release/telex.exe) — bấm vào rồi chọn
+**Download**. Không cần cài đặt, chạy thẳng file là xong, icon hiện ở khay hệ
+thống.
+
+Windows SmartScreen có thể cảnh báo vì file chưa ký số: chọn **More info** →
+**Run anyway**.
+
+## Tự build
 
 Cần Visual Studio (bản Community là đủ). Không cần cài thêm gì khác.
 

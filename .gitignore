@@ -7,6 +7,9 @@ build/
 *.exp
 *.lib
 
+# Bản build sẵn để tải về
+!release/telex.exe
+
 # Written by telex at runtime, next to the exe
 exclude.txt
 
