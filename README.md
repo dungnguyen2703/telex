@@ -5,10 +5,10 @@ Bộ gõ tiếng Việt tối giản, chạy nền dưới khay hệ thống.
 Ý tưởng: giống UniKey nhưng lược bỏ gần như toàn bộ tùy chọn. Chỉ còn đúng hai
 thứ — gõ tiếng Việt kiểu Telex, và một phím tắt để bật/tắt.
 
-| Nền tảng | Tình trạng |
-| --- | --- |
-| **Windows** | Xong, có bản tải sẵn |
-| **macOS** | Đang phát triển |
+| Nền tảng | Tình trạng | Phím tắt |
+| --- | --- | --- |
+| **Windows** | Xong, có bản tải sẵn | `Alt + Z` |
+| **macOS** | Xong, có bản tải sẵn | `Control + Space` |
 
 Hai bản được viết **độc lập hoàn toàn**, không dùng chung dòng code nào: bản
 Windows viết bằng C++/Win32, bản macOS viết bằng Swift. Thứ dùng chung là tài
@@ -32,8 +32,9 @@ hệt nhau.
   - Gõ lại phím dấu để xóa dấu (ví dụ `as` → á, `ass` → as).
   - Bỏ dấu đúng vị trí theo cách UniKey đang làm.
   - Tự hủy dấu khi từ đang gõ không phải là từ tiếng Việt hợp lệ.
-- **Bật/tắt**: một phím tắt để bật hoặc tắt bộ gõ. Khi tắt, chương trình không
-  can thiệp vào bàn phím, gõ ra ký tự gốc.
+- **Bật/tắt**: một phím tắt để bật hoặc tắt bộ gõ (`Alt + Z` trên Windows,
+  `Control + Space` trên macOS). Khi tắt, chương trình không can thiệp vào bàn
+  phím, gõ ra ký tự gốc.
 - **Danh sách loại trừ**: một file text, mỗi dòng một tên chương trình. Khi đang
   ở trong một ứng dụng có trong danh sách, bộ gõ không can thiệp — gõ ra ký tự
   gốc y như khi đang tắt. Rời khỏi ứng dụng đó thì bộ gõ hoạt động lại bình
@@ -72,7 +73,19 @@ Riêng Windows:
 - **Cửa sổ chạy quyền admin không gõ được** nếu telex chạy quyền thường. Đây là
   giới hạn của Windows, muốn dùng thì chạy telex bằng quyền admin.
 
-Riêng macOS: sẽ ghi ở đây khi bản macOS xong.
+Riêng macOS:
+
+- Phím tắt là **`Control + Space`**. Vì telex nuốt trọn tổ hợp này, shortcut đổi
+  nguồn nhập của hệ thống sẽ không còn tác dụng khi telex đang chạy — telex thay
+  thế luôn nó.
+- **Phải cấp quyền Accessibility.** Không có quyền này macOS không cho đọc bàn
+  phím, app sẽ không làm được gì. Lần đầu chạy telex sẽ nhắc và mở thẳng
+  System Settings cho bạn.
+- **Ô mật khẩu không gõ được** (Secure Event Input). Cũng vậy với Terminal khi
+  bật secure keyboard entry. Đây là giới hạn của macOS, tương đương chuyện cửa
+  sổ admin bên Windows.
+- App chưa ký số chính thức nên Gatekeeper sẽ chặn lần đầu: chuột phải vào app,
+  chọn **Open**, rồi xác nhận.
 
 ## Tải về
 
@@ -84,7 +97,10 @@ thống.
 Windows SmartScreen có thể cảnh báo vì file chưa ký số: chọn **More info** →
 **Run anyway**.
 
-**macOS** — chưa có, đang phát triển.
+**macOS** — bản build sẵn nằm ở [macos/build/telex.app](macos/build/telex.app).
+Tải về, kéo vào thư mục Applications rồi chạy. Lần đầu chạy: chuột phải vào app
+chọn **Open** để qua Gatekeeper, rồi cấp quyền Accessibility khi được hỏi. Icon
+chữ **V** sẽ hiện ở thanh menu.
 
 ## Tự build
 
@@ -99,7 +115,17 @@ build.bat test   # chạy toàn bộ test
 
 Chạy `windows\build\telex.exe`, icon sẽ hiện ở khay hệ thống.
 
-**macOS.** Chưa có.
+**macOS.** Cần Xcode Command Line Tools. Không cần cài thêm gì khác.
+
+```
+cd macos
+./build.sh          # tạo build/telex.app
+./build.sh engine   # chạy test engine
+./build.sh test     # chạy toàn bộ test
+```
+
+Lưu ý: mỗi lần build lại thì chữ ký của app đổi, nên phải cấp lại quyền
+Accessibility — xoá mục cũ bằng nút `−` rồi thêm lại bằng `+`.
 
 ## Nguyên tắc
 
@@ -118,3 +144,5 @@ Tài liệu kỹ thuật:
   và bộ test tier 1 mà cả hai bản phải qua.
 - [windows/docs/](windows/docs/) — riêng bản Windows: các bẫy Win32, test e2e,
   thứ tự triển khai.
+- [macos/docs/](macos/docs/) — riêng bản macOS: các bẫy của CGEventTap, quyền
+  Accessibility, test e2e, thứ tự triển khai.

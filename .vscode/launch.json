@@ -1,0 +1,44 @@
+{
+    "configurations": [
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:telex}/macos",
+            "name": "Debug TelexE2E (macos)",
+            "target": "TelexE2E",
+            "configuration": "debug",
+            "preLaunchTask": "swift: Build Debug TelexE2E (macos)"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:telex}/macos",
+            "name": "Release TelexE2E (macos)",
+            "target": "TelexE2E",
+            "configuration": "release",
+            "preLaunchTask": "swift: Build Release TelexE2E (macos)"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:telex}/macos",
+            "name": "Debug TelexApp (macos)",
+            "target": "TelexApp",
+            "configuration": "debug",
+            "preLaunchTask": "swift: Build Debug TelexApp (macos)"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:telex}/macos",
+            "name": "Release TelexApp (macos)",
+            "target": "TelexApp",
+            "configuration": "release",
+            "preLaunchTask": "swift: Build Release TelexApp (macos)"
+        }
+    ]
+}
