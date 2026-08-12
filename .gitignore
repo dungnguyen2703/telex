@@ -8,13 +8,19 @@ build/
 *.lib
 
 # Bản build sẵn để tải về
-!release/telex.exe
+!windows/release/telex.exe
+!macos/release/telex.app
 
 # Written by telex at runtime, next to the exe
 exclude.txt
+
+# macOS build output
+.build/
+*.o
 
 # Editor / OS noise
 .vs/
 *.user
 Thumbs.db
 desktop.ini
+.DS_Store

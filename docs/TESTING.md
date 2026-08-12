@@ -1,112 +1,151 @@
-# TESTING — How we test so nothing slips through
+# TESTING — The test contract both implementations obey
 
 Rule: **never type a few words by hand and call it working**. Every rule in
-[TELEX.md](TELEX.md) needs at least one automated case, and the Windows layer is
+[TELEX.md](TELEX.md) needs at least one automated case, and the platform layer is
 verified by machine, not by eye.
 
-Three tiers, cheapest first:
+Three tiers, cheapest first. **Tier 1 is shared and is specified here** — the
+same required coverage and the same corpus file for both builds. Tiers 2 and 3
+are inherently platform-specific and are specified per platform:
 
-## Tier 1 — Engine unit tests (`tests/engine_tests.cpp`)
+| Tier | Windows | macOS |
+| --- | --- | --- |
+| 1 — engine | this file | this file |
+| 2 — end to end | [windows/docs/TESTING.md](../windows/docs/TESTING.md) | [macos/docs/TESTING.md](../macos/docs/TESTING.md) |
+| 3 — manual | [windows/docs/TESTING.md](../windows/docs/TESTING.md) | [macos/docs/TESTING.md](../macos/docs/TESTING.md) |
 
-Run against the pure engine: no Windows, no keyboard. This catches 99% of bugs
-and finishes in under a second, so it runs after **every** code change.
+## Why tier 1 is shared
+
+The two implementations share no code, so nothing but a test suite can keep them
+behaving the same. Tier 1 is that guarantee: **an implementation is a faithful
+telex only once it passes every case below and the whole corpus.** Both builds
+read the same [corpus.txt](corpus.txt); it is not copied per platform, precisely
+so the two cannot quietly drift apart.
+
+A behaviour difference between the two builds is a bug in one of them, never a
+platform difference. If the rules themselves need to change, change
+[TELEX.md](TELEX.md) first, then both engines.
+
+## Tier 1 — Engine tests
+
+Run against the pure engine: no OS, no keyboard. This catches 99% of bugs and
+finishes in under a second, so it runs after **every** code change.
 
 Case format: a key sequence in, an expected string out.
 
-```cpp
-CHECK("tieengs vieejt", u"tiếng việt");
-CHECK("hello",          u"hello");
+```
+CHECK("tieengs vieejt", "tiếng việt")
+CHECK("hello",          "hello")
 ```
 
-Required coverage:
+### The harness
 
-| Group | Minimum cases |
-| --- | --- |
-| 5 tones × every single vowel (a ă â e ê i o ô ơ u ư y) | 60 |
-| Letter transforms `aa ee oo aw ow uw dd` | 3 each |
-| The `uo` + `w` → ươ cluster in every typing order (`uow`, `uwow`, `uongw`) | 6 |
-| Retype-to-undo: tones, letters, `z`, standalone `w` | 10 |
-| Changing tone mid-word (`asf`, `axj`) | 5 |
-| Free positioning: tone before and after the coda | 10 |
-| All 5 tone-placement rules from TELEX.md §5, ≥ 3 each | 15 |
-| The `qu` and `gi` exceptions | 6 |
-| English words that must survive verbatim (hello, sport, email, world, string…) | 20 |
-| Capitalisation and Caps Lock | 10 |
-| Backspace mid-word, over a diacritic, over `đ` | 8 |
-| Backspace, then carry on typing and marking the word | 12 |
-| Backspace back across a space into an earlier word | 14 |
-| đ in both typing orders, plus what English words it eats | 22 |
-| Word boundaries: space, punctuation, digits | 8 |
-| The full example table in TELEX.md §10 | all |
+A case drives the engine exactly the way the platform layer does, keeping its own
+model of what is on screen: on `PassThrough` append the character, on `Replace`
+drop `backspaces` characters from the end and append `insert`. `\b` in the key
+string means Backspace. Comparing that model against the expected string is what
+makes the `backspaces` count testable at all — an implementation that always
+rewrites the whole word passes a naive harness and fails this one.
 
-**Corpus test.** Beyond individual cases, `tests/corpus.txt` holds ≥ 300 real
-Vietnamese syllables (one per line, `telex → expected`) covering every nucleus
-in the table, all checked in one pass. Whenever a bug is found in the wild, add
-a line here *before* fixing the code.
+Non-letters are fed to the engine as ordinary keys; the engine itself treats them
+as word boundaries.
+
+### Required coverage
+
+Counts are the assertions in the Windows build, which is the reference. A second
+implementation is expected to reach every group, not a particular number.
+
+| Group | Covers | Cases |
+| --- | --- | --- |
+| Spec examples | the full table in TELEX.md §10 | 27 |
+| Tones | 5 tones × 12 single vowels (60), changing tone mid-word, `z` removing it and `z` as a literal | 66 |
+| Letter transforms | `aa ee oo aw ow uw dd`, standalone `w`, `w` after a consonant, the `uo` + `w` cluster in every typing order (6), and the `qu` onset that `w` must not touch | 26 |
+| Retype to undo | tones, letters, `z`, standalone `w`, and carrying on normally after an undo | 18 |
+| Free positioning | marks typed before, inside and **after** the coda (`vanas`, `khongo`, `muonos`, `congoj`, `nguyenej`), the validity check stopping it running wild, and the adjacency rule (`vieete`) | 35 |
+| đ | both typing orders, at a distance, capitalised, and the English words it eats | 21 |
+| Backspace then continue | deleting mid-word and carrying on, putting a mark **back** after a backspace, marks applying to what is left | 23 |
+| Backspace across words | adopting a word from history over a space, punctuation or digits; text we never typed | 15 |
+| Tone placement | all 5 rules from TELEX.md §5, ≥ 3 each | 25 |
+| English words | 24 that must survive verbatim, plus the 5 known manglings (`test`, `win`, `wrong`, `password`, `miss`) | 29 |
+| Capitalisation | `Aa`, `DD`, `dD`, `Dd`, `Ows`, whole words, all caps | 9 |
+| Backspace | mid-word, over a diacritic, over `đ`, on an empty word | 8 |
+| Word boundaries | space, punctuation, digits, tab | 7 |
+| Revert to literal | a transformed word that stops being Vietnamese, and the next word starting clean | 6 |
+| Syllable validity | the structural checker directly, **including strict vs lenient** | 14 |
+| Corpus round-trip | every syllable in [corpus.txt](corpus.txt) | 333 |
+| | **Total** | **662** |
+
+The last two groups are unit tests of the layers underneath the state machine
+rather than key sequences. The validity group is the only place the strict mode
+is exercised at all (see [DESIGN.md](DESIGN.md)); everything else goes through
+the engine, which only ever uses lenient.
+
+**Corpus test.** Beyond individual cases, [corpus.txt](corpus.txt) holds ≥ 300
+real Vietnamese syllables (one per line) covering every nucleus in the table, all
+checked in one pass. Whenever a bug is found in the wild, add a line here
+*before* fixing the code — and it then guards both builds at once.
 
 **Round-trip test.** For every syllable in the corpus: derive its Telex spelling
 from the syllable itself, type that back, and require the original syllable. This
-catches placement bugs that hand-written cases routinely miss.
+catches placement bugs that hand-written cases routinely miss. Deriving the
+spelling is itself part of the test — it is the same base-letter/mark/keys split
+that adopting a word from history uses (TELEX.md §8).
 
-## Tier 2 — Real end-to-end tests (`tests/e2e_test.cpp`)
+### What a fresh implementation fails first
 
-Covers what unit tests cannot reach: whether the hook actually intercepts keys,
-whether it recurses, whether the right number of backspaces goes out.
+In order of how often they were the actual bug, not how hard they look:
 
-Mechanism: the test program creates its own window with an `EDIT` control,
-brings it to the foreground, injects keys with `SendInput`, then reads the
-control back with `WM_GETTEXT` and compares.
+1. **Marks typed after the whole word.** `khongo` → không, `muonos` → muốn,
+   `congoj` → cộng. This is how most people really type and it is the group that
+   grew the most during testing.
+2. **State surviving between words.** `vay roi` → delete back to `vay` → `a` →
+   vây. Nothing else in tier 1 depends on state outliving a word boundary, so an
+   implementation that never built the history passes everything else.
+3. **Putting a mark back after a backspace.** `tieengs` ⌫ `gs` → tiếng, not
+   tiêng. Adjacent retype undoes, non-adjacent applies.
+4. **Strict validity used in the input path.** Looks correct on finished words,
+   falls apart while typing.
 
-This is why the hook must **not** skip input based on the `LLKHF_INJECTED` flag
-(see DESIGN pitfall 1) — doing so would make automated testing impossible.
+Get these four green before starting any platform work.
 
-Required scenarios:
+### Known gaps in the reference build
 
-1. Type `tieengs vieejt` → the EDIT control contains `tiếng việt`.
-2. Press `Alt + Z`, type again → the control contains `tieengs vieejt` (now off).
-3. Press `Alt + Z` again → Vietnamese output resumes (toggle works both ways).
-4. Add the test program's own exe name to `exclude.txt` → output is literal even
-   though the state is ON.
-5. Remove it from `exclude.txt` → Vietnamese output resumes **without
-   restarting the app**.
-6. Type `hoas` then Backspace twice → exactly the right characters remain,
-   nothing extra, nothing missing.
-6b. Type `vay roi`, delete back to `vay`, press `a` → vây. The word from before
-   the space has to be picked up again.
-6c. Type `tieengs`, delete the g, type `gs` → tiếng. Putting a mark back must not
-   be read as removing it.
-7. Inject 200 characters as fast as possible → every character still correct
-   (catches ordering races between real and injected keys).
-8. Type continuously for several seconds, then type one more word → the hook is
-   still alive (Windows has not dropped it for exceeding the timeout).
-9. Post `WM_CLOSE` → the process exits on its own, meaning the message loop was
-   healthy and the teardown path (unhook, remove the tray icon) ran.
+Not blocking, but they are gaps, and both builds should close them together:
 
-The test program carries a watchdog that kills it, and any surviving telex.exe,
-after two minutes. Injecting global input can wedge if something steals the
-foreground, and a test that hangs is worse than one that fails.
+- Capitalisation has 9 cases where the original target was 10.
+- The đ group has 21 where the target was 22.
+- Word boundaries has 7 where the target was 8.
+
+## Tier 2 — End to end
+
+Covers what unit tests cannot reach: whether the interception layer actually sees
+keys, whether it recurses, whether the right number of backspaces goes out,
+whether the process is still alive after sustained typing.
+
+The mechanism differs per platform, but three requirements do not:
+
+1. The test **injects real keys** into a real text control of a real running
+   build, and reads the text back. Calling the engine directly is tier 1, not
+   tier 2.
+2. Because the tests inject keys, the interception layer must **not** filter on
+   the platform's generic "injected event" flag — only on our own signature
+   (see [DESIGN.md](DESIGN.md), *Output*). This constraint exists to keep the app
+   testable and may not be traded away.
+3. The test carries a **watchdog** that kills it, and any surviving telex
+   process, after two minutes. Injecting global input can wedge if something
+   steals the foreground, and a test that hangs is worse than one that fails.
+
+Scenarios each platform must cover, at minimum: correct Vietnamese output;
+toggle off and on again; exclusion applied and then removed *without restarting*;
+backspace mid-word; a burst of ~200 characters with nothing lost or reordered;
+sustained typing without the interception being dropped; and a clean exit that
+leaves no icon behind.
 
 ## Tier 3 — Manual checklist
 
-Run only before declaring the project done. In each app: type `tieengs vieejt`,
-type a sentence containing `đ`, hit Backspace mid-word, press `Alt + Z` twice.
-
-- [ ] Notepad
-- [ ] Chrome / Edge address bar (autocomplete interferes here)
-- [ ] A Google search box inside a page
-- [ ] VS Code (Electron)
-- [ ] Discord or Slack (Electron, rich text input)
-- [ ] Microsoft Word
-- [ ] PowerShell / cmd
-- [ ] The File Explorer rename box
-- [ ] The Start Menu search box
-- [ ] An app running elevated → confirm it does not work (known limitation,
-      documented in the README)
-
-## Running the tests
-
-`build.bat test` compiles and runs tier 1 then tier 2, prints pass/fail counts,
-and exits non-zero if anything failed. No case may be marked "skip for now".
+Run only before declaring a platform done. In each application: type
+`tieengs vieejt`, type a sentence containing `đ`, hit Backspace mid-word, toggle
+off and on. The application list is per platform.
 
 ## Bug workflow
 
@@ -114,4 +153,7 @@ and exits non-zero if anything failed. No case may be marked "skip for now".
 2. Fix the code.
 3. Re-run everything; confirm no other case regressed.
 4. If the bug is that TELEX.md describes the wrong behaviour, fix TELEX.md first,
-   then the code.
+   then the code — **in both implementations**, or record explicitly why one is
+   not affected.
+
+No case may be marked "skip for now", in either build.

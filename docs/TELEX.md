@@ -57,6 +57,15 @@ word and add the marks afterwards:
 - `dandf` → đàn, `danhsd` → đánh. đ is always the onset, so only the first
   letter can become one.
 
+This includes typing the doubling key **after the coda**, which is what happens
+whenever someone types a whole word before going back for the marks. The key
+reaches over the coda to the vowel that needs it:
+
+- `khongo` → không, `muonos` → muốn, `congoj` → cộng, `nguyenej` → nguyện
+- `duocwj` → dược, `dduocwj` / `dduowcj` → được, `truongwf` → trường
+- `danhs` → dánh but `danhas` → dấnh: the `s` only adds a tone, while the `a`
+  reaches back to make the nucleus `â`.
+
 What keeps this from running wild is the validity check: in `ngoeor` the second
 `o` would have to make the nucleus `ôe`, which no Vietnamese syllable has, so the
 key stays a plain letter and the word comes out as ngoẻo. A letter that already
@@ -74,6 +83,19 @@ that key literally:
 | `a` `w` `w` | aw |
 | `d` `d` `d` | dd |
 | `o` `o` `o` | oo (so `boong` is typed `booong`) |
+
+**Only the key typed immediately after the one that applied the mark undoes
+it.** The engine remembers a single "last transform" key and clears that memory
+on anything else — another letter, a backspace, a word boundary. Without this
+rule, going back to fix a word would strip the marks the user just put on:
+
+- `vieete` → vieete: the `e` does not follow the `e` that made `iê`, so it is
+  just a letter, and it makes the syllable invalid.
+- `tieengs` ⌫ `gs` → tiếng: a backspace stands between the two `s`, so the
+  second one **adds** the tone rather than removing it.
+- `tieengs` ⌫ `ss` → tiêns: here the two `s` are adjacent again, so the second
+  one does undo.
+- `ddi` ⌫ `da` → đda: the `d` no longer counts as retyping the `dd`.
 
 Typing a **different** tone key replaces the tone and emits nothing:
 `asf` → à, `asx` → ã.
@@ -103,6 +125,25 @@ syllable = [onset] + [nucleus] + [coda] + [tone]
 This is a **structural** check, not a dictionary lookup. `bươn`, `khoét` and
 `nghiễng` are all valid even if they are not real words.
 
+### Complete syllables versus half-typed ones
+
+The check has two modes, and **the input engine only ever uses the lenient one**:
+
+| Mode | Question it answers | Used by |
+| --- | --- | --- |
+| lenient | could this still grow into a valid syllable? | every decision the engine makes |
+| strict | is this a complete, well-formed syllable right now? | nothing in the engine; unit-tested only |
+
+The user is always in the middle of a word, so judging what they have typed so
+far as if it were finished would reject almost everything. Lenient accepts a
+plausible **prefix**: an onset still being spelled (`q` on its way to `qu`), or
+an empty nucleus, or a nucleus on its way somewhere (`nghieng` before the `ie`
+becomes `iê`). Strict rejects all three.
+
+An implementation that uses the strict mode anywhere in the input path will look
+like it works on finished words and fall apart while typing. If you only
+implement one mode, implement lenient.
+
 ## 5. Tone placement (classic style)
 
 Evaluate in order, stop at the first rule that matches:
@@ -123,18 +164,18 @@ Rule 5 is what separates "classic" from "modern" placement. We use classic
 
 ## 6. Reverting invalid syllables
 
-The engine keeps two parallel strings: `buffer_` (displayed) and `raw_` (the
-literal keys pressed).
+The engine keeps the **displayed text** and the **raw keys** the user pressed
+side by side (per letter — see [DESIGN.md](DESIGN.md), *The engine contract*).
 
-- **If no transform has been applied yet** (`buffer_ == raw_`), skip all checks
-  and pass every key straight through. This is the path almost all English text
-  takes, so it must be cheap.
+- **If no transform has been applied yet** (displayed text == raw keys), skip all
+  checks and pass every key straight through. This is the path almost all English
+  text takes, so it must be cheap.
 - **When applying a transform** would produce an invalid syllable, don't apply
   it — emit the key literally. (`s` at word start → `s`; `hells` → `hells`)
 - **When appending a plain letter** to a word that already has a transform makes
-  the syllable invalid, **revert the whole word to `raw_`** (send backspaces,
-  retype the original keys) and mark the word "dead": every remaining key of the
-  word passes straight through.
+  the syllable invalid, **revert the whole word to the raw keys** (send
+  backspaces, retype the original keys) and mark the word "dead": every remaining
+  key of the word passes straight through.
   (`hello`: `hel` has an invalid coda → revert to `hel`, then `l`, `o` pass
   through → **hello**)
 
@@ -166,21 +207,44 @@ doubt, forget.
 
 ## 8. Backspace
 
-Drop one character from the end of `buffer_` and the corresponding keys from the
-end of `raw_`, then let the Backspace key through untouched (don't swallow it,
-don't compensate). Never try to reconstruct a diacritic that was deleted. If
-`buffer_` is empty, just pass through.
+Drop the last letter of the word being typed, then let the Backspace key through
+untouched (don't swallow it, don't compensate). Never try to reconstruct a
+diacritic that was deleted, and never reposition the remaining tone mark — the
+character the user deleted is already gone from the screen and we do not rewrite
+what is left.
 
-When `raw_` is longer than `buffer_` (e.g. `dd` → `đ`), remove all raw keys that
-produced the deleted character, so subsequent typing does not desynchronise.
+When a letter took several keys to produce (e.g. `dd` → `đ`), remove **all** the
+raw keys that produced it, so subsequent typing does not desynchronise.
+
+### Adopting the previous word
 
 **Backspacing past the start of a word adopts the previous one.** Someone types
 `vay`, a space, a few more words, then deletes back to `vay` and presses `a`
-expecting vây. That only works if the engine takes the word back, so it keeps the
-last 128 characters it has itself put on screen and rebuilds the word from them -
-splitting each character back into its base letter, its mark and the Telex keys
-that would produce it. The moment we are no longer sure what sits in front of the
-caret (section 7), that memory is dropped.
+expecting vây. That only works if the engine takes the word back.
+
+To make it work, the engine remembers the **last 128 characters it has itself put
+on screen**, ended words included, with the character that ended each word kept
+as the separator (a space when the platform layer could not say which character
+it was). When Backspace arrives and there is no word being typed:
+
+1. Drop the one character the application is about to delete.
+2. Walk back over the trailing letters to find where that word starts.
+3. Rebuild it letter by letter — splitting each character into its base letter,
+   its mark, and the Telex keys that would produce it — and remove it from the
+   remembered text.
+
+Two consequences worth stating, because they are observable:
+
+- The word is rebuilt from the **canonical** Telex spelling, not from whatever
+  the user originally typed. `đường` comes back as `dduwowngf` even if it was
+  first typed `duongwdf`. Marking it up afterwards behaves the same either way;
+  only a revert would show the difference.
+- **If the engine did not put the text there, it will not touch it.** With
+  nothing remembered, Backspace just passes through and the following keys start
+  a fresh word.
+
+The moment we are no longer sure what sits in front of the caret (section 7),
+that memory is dropped.
 
 **Backspace also disables reverting for the rest of the word** (section 6). Once
 the user has deleted something, whatever is left is text they have looked at and

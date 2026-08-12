@@ -48,7 +48,8 @@ echo [build] engine_tests.exe
 cl %CFLAGS% /Fe%OUT%\engine_tests.exe %ROOT%tests\engine_tests.cpp %ENGINE%
 if errorlevel 1 exit /b 1
 echo [run] engine tests
-"%OUT%\engine_tests.exe" "%ROOT%tests\corpus.txt"
+rem  The corpus is shared with the macOS build; see docs\TESTING.md.
+"%OUT%\engine_tests.exe" "%ROOT%..\docs\corpus.txt"
 exit /b %errorlevel%
 
 :test
