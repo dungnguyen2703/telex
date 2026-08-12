@@ -49,8 +49,12 @@ Sources/
     Exclusion.swift     reads exclude.txt, resolves the frontmost bundle id
 Tests/
   TelexEngineTests/  <- tier 1, the same coverage as the Windows build
+  E2E/               <- tier 2, launches the app and injects real keystrokes
+Tools/
+  makeicon.swift     <- renders the app icon at build time, compiled against
+                        Icon.swift so it cannot drift from the menu bar artwork
 Resources/
-  Info.plist          LSUIElement, bundle id, version
+  Info.plist          LSUIElement, bundle id, version, CFBundleIconFile
 build.sh
 build/telex.app       <- build output, and the committed download
 ```
@@ -167,6 +171,9 @@ Shared semantics are in [docs/DESIGN.md](../../docs/DESIGN.md). macOS specifics:
 - Two icons drawn with `NSImage`/`NSBezierPath` at runtime, no binary assets, the
   same artwork as the Windows tray: a **V** on a rounded square, red when on and
   grey when off. Drawn as non-template images so the colour survives.
+- `build.sh` also renders `AppIcon.icns` into `Contents/Resources` from the same
+  `Icon.swift`, plus the `.ico` the Windows build links in. Copying the icon in
+  must happen **before** `codesign`: the signature covers bundle resources.
 - The item's tooltip states the current mode and the chord.
 - Left click toggles. Right click (or click on the menu) opens two items: *Open
   exclusion list* and *Quit*.

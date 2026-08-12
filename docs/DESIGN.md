@@ -226,6 +226,10 @@ per-platform.
 
 - Two icons: ON (white **V** on a red rounded square) and OFF (the same shape in
   grey), drawn in code at startup so the build needs no binary assets.
+- The **application icon** — what Finder or Explorer shows for the file itself —
+  is the one exception, because the shell reads it out of the file without ever
+  running the program. It is the same artwork, and both builds generate it from
+  the same drawing code at build time rather than checking in a picture.
 - The tooltip / title states the current mode and the toggle chord.
 - Clicking the icon toggles. The menu has exactly two items: open the exclusion
   list, and quit.

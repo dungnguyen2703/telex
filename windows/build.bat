@@ -29,6 +29,7 @@ if not exist "%OUT%" mkdir "%OUT%"
 
 set "CFLAGS=/nologo /std:c++17 /utf-8 /EHsc /W4 /O2 /D_CRT_SECURE_NO_WARNINGS /DUNICODE /D_UNICODE /Fo%OUT%\\"
 set "ENGINE=%ROOT%src\engine\tables.cpp %ROOT%src\engine\syllable.cpp %ROOT%src\engine\telex.cpp"
+set "RES=%OUT%\telex.res"
 set "APP=%ROOT%src\app\main.cpp %ROOT%src\app\hook.cpp %ROOT%src\app\sender.cpp %ROOT%src\app\tray.cpp %ROOT%src\app\icon.cpp %ROOT%src\app\exclusion.cpp"
 
 if /i "%~1"=="engine" goto :engine
@@ -38,7 +39,11 @@ if /i "%~1"=="test" goto :test
 echo [build] telex.exe
 rem  A running instance holds the exe open and the link would fail.
 taskkill /IM telex.exe /F >nul 2>nul
-cl %CFLAGS% /Fe%OUT%\telex.exe %APP% %ENGINE% user32.lib shell32.lib gdi32.lib /link /SUBSYSTEM:WINDOWS
+rem  The application icon Explorer shows. The tray icons are still drawn with
+rem  GDI at runtime; only this one has to be a file (see telex.rc).
+rc /nologo /i "%ROOT%." /fo "%RES%" "%ROOT%telex.rc"
+if errorlevel 1 exit /b 1
+cl %CFLAGS% /Fe%OUT%\telex.exe %APP% %ENGINE% "%RES%" user32.lib shell32.lib gdi32.lib /link /SUBSYSTEM:WINDOWS
 if errorlevel 1 exit /b 1
 echo Built %OUT%\telex.exe
 exit /b 0
@@ -59,7 +64,11 @@ echo.
 echo [build] telex.exe
 rem  A running instance holds the exe open and the link would fail.
 taskkill /IM telex.exe /F >nul 2>nul
-cl %CFLAGS% /Fe%OUT%\telex.exe %APP% %ENGINE% user32.lib shell32.lib gdi32.lib /link /SUBSYSTEM:WINDOWS
+rem  The application icon Explorer shows. The tray icons are still drawn with
+rem  GDI at runtime; only this one has to be a file (see telex.rc).
+rc /nologo /i "%ROOT%." /fo "%RES%" "%ROOT%telex.rc"
+if errorlevel 1 exit /b 1
+cl %CFLAGS% /Fe%OUT%\telex.exe %APP% %ENGINE% "%RES%" user32.lib shell32.lib gdi32.lib /link /SUBSYSTEM:WINDOWS
 if errorlevel 1 exit /b 1
 echo [build] e2e_test.exe
 cl %CFLAGS% /Fe%OUT%\e2e_test.exe %ROOT%tests\e2e_test.cpp user32.lib shell32.lib

@@ -15,14 +15,34 @@ bin_path() {
     swift build -c release --show-bin-path
 }
 
+# The repository carries no image files. The icon Finder shows is rendered at
+# build time by the same code that draws the menu bar icon, so the two cannot
+# drift apart. See Tools/makeicon.swift.
+build_icons() {
+    mkdir -p "$OUT"
+    swiftc -O "$ROOT/Tools/makeicon.swift" "$ROOT/Sources/TelexApp/Icon.swift" \
+        -o "$OUT/makeicon"
+    "$OUT/makeicon" "$OUT" >/dev/null
+    iconutil -c icns "$OUT/AppIcon.iconset" -o "$OUT/AppIcon.icns"
+    # The Windows build has no Swift toolchain, so its .ico is generated here
+    # and committed. Copying it every build keeps the two in step.
+    cp "$OUT/telex.ico" "$ROOT/../windows/telex.ico"
+}
+
 # Assembles a .app around a SwiftPM executable. Accessibility permission is
 # keyed on bundle id plus signature, so a loose binary asks again every launch.
 bundle() {
-    local app="$1" plist="$2" product="$3" exe="$4"
+    local app="$1" plist="$2" product="$3" exe="$4" icon="${5:-}"
     rm -rf "$app"
     mkdir -p "$app/Contents/MacOS"
     cp "$ROOT/Resources/$plist" "$app/Contents/Info.plist"
     cp "$(bin_path)/$product" "$app/Contents/MacOS/$exe"
+    if [ -n "$icon" ]; then
+        mkdir -p "$app/Contents/Resources"
+        cp "$icon" "$app/Contents/Resources/AppIcon.icns"
+    fi
+    # Signing comes last: it covers the resources too, so anything copied in
+    # afterwards would invalidate the signature.
     codesign --force --sign - --timestamp=none "$app" >/dev/null 2>&1
 }
 
@@ -31,7 +51,8 @@ build_app() {
     # A running instance would tap every key twice.
     pkill -x telex 2>/dev/null || true
     swift build -c release --product TelexApp
-    bundle "$APP" Info.plist TelexApp telex
+    build_icons
+    bundle "$APP" Info.plist TelexApp telex "$OUT/AppIcon.icns"
     echo "Built $APP"
 }
 
