@@ -49,11 +49,22 @@ tests/
   engine_tests.cpp   <- tier 1, runs against the engine, no Windows needed
   e2e_test.cpp       <- tier 2, injects keys into an EDIT control, reads back
 build.bat
-release/telex.exe    <- the prebuilt download
+build/telex.exe      <- build output, and the committed download
 ```
 
 The syllable corpus is not here: it lives in [docs/corpus.txt](../../docs/corpus.txt)
 because both builds check themselves against the same one.
+
+`build/` is the output directory and is ignored, with exactly one exception:
+`build/telex.exe` is committed, because that is the file the README links to for
+download. Two consequences to be aware of:
+
+- **Every local build overwrites it**, so `git status` will show it modified
+  after you build. That is expected. Commit it when you actually mean to ship a
+  new download; otherwise `git checkout -- build/telex.exe` to put the shipped
+  one back.
+- The other build artefacts next to it (`engine_tests.exe`, `e2e_test.exe`,
+  `*.obj`, `*.pdb`) stay ignored.
 
 The engine signature is `Result OnKey(char16_t ch)` — the case is already
 resolved by `hook.cpp`. `Action` has two values, `PassThrough` and `Replace`.

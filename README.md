@@ -77,7 +77,7 @@ Riêng macOS: sẽ ghi ở đây khi bản macOS xong.
 ## Tải về
 
 **Windows** — bản build sẵn nằm ở
-[windows/release/telex.exe](windows/release/telex.exe) — bấm vào rồi chọn
+[windows/build/telex.exe](windows/build/telex.exe) — bấm vào rồi chọn
 **Download**. Không cần cài đặt, chạy thẳng file là xong, icon hiện ở khay hệ
 thống.
 

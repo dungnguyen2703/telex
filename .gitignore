@@ -1,22 +1,22 @@
-# Build output
-build/
+# Build output.
+#
+# Note the patterns are "dir/*" and not "dir/": git cannot re-include a file
+# whose parent directory is excluded, and we need exactly one exception —
+# the prebuilt download at the bottom of this file.
+windows/build/*
+macos/build/*
+macos/.build/
+
 *.exe
 *.obj
 *.pdb
 *.ilk
 *.exp
 *.lib
-
-# Bản build sẵn để tải về
-!windows/release/telex.exe
-!macos/release/telex.app
+*.o
 
 # Written by telex at runtime, next to the exe
 exclude.txt
-
-# macOS build output
-.build/
-*.o
 
 # Editor / OS noise
 .vs/
@@ -24,3 +24,7 @@ exclude.txt
 Thumbs.db
 desktop.ini
 .DS_Store
+
+
+!windows/build/telex.exe
+!macos/build/telex.app
