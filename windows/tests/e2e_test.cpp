@@ -34,6 +34,10 @@ DWORD WINAPI Watchdog(LPVOID) {
 
 HWND g_window = nullptr;
 HWND g_edit = nullptr;
+// A second, unrelated window+control, used only to prove that switching away
+// mid-word and back does not leak state between the two (scenario 10).
+HWND g_window2 = nullptr;
+HWND g_edit2 = nullptr;
 std::wstring g_telexPath;
 std::wstring g_excludePath;
 PROCESS_INFORMATION g_telex = {};
@@ -69,24 +73,33 @@ void Pump(DWORD milliseconds) {
     }
 }
 
+// One key event per SendInput call, each followed by a short pump. GetKeyState
+// (which EDIT controls use internally to decide Shift-extended selection)
+// only reflects a modifier as down once its keydown message has actually been
+// read off this thread's queue — batching Shift+key into a single SendInput
+// call left the control seeing Shift as still up while it handled the key.
 void SendVk(WORD vk, bool shift) {
-    INPUT in[4] = {};
-    int n = 0;
+    INPUT in = {};
+    in.type = INPUT_KEYBOARD;
     if (shift) {
-        in[n].type = INPUT_KEYBOARD;
-        in[n++].ki.wVk = VK_SHIFT;
+        in.ki.wVk = VK_SHIFT;
+        in.ki.dwFlags = 0;
+        SendInput(1, &in, sizeof(INPUT));
+        Pump(10);
     }
-    in[n].type = INPUT_KEYBOARD;
-    in[n++].ki.wVk = vk;
-    in[n].type = INPUT_KEYBOARD;
-    in[n].ki.wVk = vk;
-    in[n++].ki.dwFlags = KEYEVENTF_KEYUP;
+    in.ki.wVk = vk;
+    in.ki.dwFlags = 0;
+    SendInput(1, &in, sizeof(INPUT));
+    Pump(10);
+    in.ki.dwFlags = KEYEVENTF_KEYUP;
+    SendInput(1, &in, sizeof(INPUT));
+    Pump(10);
     if (shift) {
-        in[n].type = INPUT_KEYBOARD;
-        in[n].ki.wVk = VK_SHIFT;
-        in[n++].ki.dwFlags = KEYEVENTF_KEYUP;
+        in.ki.wVk = VK_SHIFT;
+        in.ki.dwFlags = KEYEVENTF_KEYUP;
+        SendInput(1, &in, sizeof(INPUT));
+        Pump(10);
     }
-    SendInput(static_cast<UINT>(n), in, sizeof(INPUT));
 }
 
 // Types an ASCII string. '\b' is Backspace.
@@ -123,24 +136,62 @@ void SendAltZ() {
     Pump(120);
 }
 
-std::wstring EditText() {
-    const int length = GetWindowTextLengthW(g_edit);
+// Ctrl+<vk>, e.g. Ctrl+A (select all), Ctrl+Z (undo). Any Ctrl chord must make
+// the hook call Engine.Reset() (docs/DESIGN.md, "Flow of a single keystroke",
+// step 5), same as it does for Alt and Win chords.
+void SendCtrlVk(WORD vk) {
+    INPUT in[4] = {};
+    in[0].type = INPUT_KEYBOARD;
+    in[0].ki.wVk = VK_CONTROL;
+    in[1].type = INPUT_KEYBOARD;
+    in[1].ki.wVk = vk;
+    in[2].type = INPUT_KEYBOARD;
+    in[2].ki.wVk = vk;
+    in[2].ki.dwFlags = KEYEVENTF_KEYUP;
+    in[3].type = INPUT_KEYBOARD;
+    in[3].ki.wVk = VK_CONTROL;
+    in[3].ki.dwFlags = KEYEVENTF_KEYUP;
+    SendInput(4, in, sizeof(INPUT));
+    Pump(120);
+}
+
+// Brings an already-created window to the foreground from a background
+// process, borrowing the input state of whoever currently owns it. Windows
+// refuses SetForegroundWindow otherwise.
+bool ForceForeground(HWND target) {
+    for (int attempt = 0; attempt < 20; ++attempt) {
+        HWND foreground = GetForegroundWindow();
+        const DWORD other = GetWindowThreadProcessId(foreground, nullptr);
+        const DWORD self = GetCurrentThreadId();
+        if (other && other != self) AttachThreadInput(self, other, TRUE);
+        BringWindowToTop(target);
+        SetForegroundWindow(target);
+        SetActiveWindow(target);
+        if (other && other != self) AttachThreadInput(self, other, FALSE);
+        Pump(150);
+        if (GetForegroundWindow() == target) return true;
+    }
+    return false;
+}
+
+std::wstring EditText(HWND edit = g_edit) {
+    const int length = GetWindowTextLengthW(edit);
     std::wstring text(static_cast<size_t>(length) + 1, L'\0');
-    const int copied = GetWindowTextW(g_edit, text.data(), length + 1);
+    const int copied = GetWindowTextW(edit, text.data(), length + 1);
     text.resize(static_cast<size_t>(copied));
     return text;
 }
 
-void ClearEdit() {
+void ClearEdit(HWND edit = g_edit) {
     SendVk(VK_ESCAPE, false);  // ends the word inside telex
     Pump(20);
-    SetWindowTextW(g_edit, L"");
-    SetFocus(g_edit);
+    SetWindowTextW(edit, L"");
+    SetFocus(edit);
     Pump(20);
 }
 
-void Expect(const char* name, const char* expectedUtf8) {
-    const std::wstring got = EditText();
+void Expect(const char* name, const char* expectedUtf8, HWND edit = g_edit) {
+    const std::wstring got = EditText(edit);
     const std::wstring want = FromUtf8(expectedUtf8);
     if (got == want) {
         ++g_pass;
@@ -181,25 +232,23 @@ bool CreateTestWindow(HINSTANCE instance) {
     g_edit = CreateWindowExW(0, L"EDIT", L"", WS_CHILD | WS_VISIBLE | ES_AUTOHSCROLL,
                              10, 10, 600, 30, g_window, nullptr, instance, nullptr);
     if (!g_edit) return false;
-
     ShowWindow(g_window, SW_SHOW);
 
-    // Windows refuses SetForegroundWindow to a process that does not currently
-    // own the foreground, so borrow the input state of whoever does.
-    for (int attempt = 0; attempt < 20; ++attempt) {
-        HWND foreground = GetForegroundWindow();
-        const DWORD other = GetWindowThreadProcessId(foreground, nullptr);
-        const DWORD self = GetCurrentThreadId();
-        if (other && other != self) AttachThreadInput(self, other, TRUE);
-        BringWindowToTop(g_window);
-        SetForegroundWindow(g_window);
-        SetActiveWindow(g_window);
-        if (other && other != self) AttachThreadInput(self, other, FALSE);
-        SetFocus(g_edit);
-        Pump(150);
-        if (GetForegroundWindow() == g_window) return true;
-    }
-    return false;
+    // A second, independent window+control on the same class, positioned well
+    // clear of the first one (scenario 10 switches between the two).
+    g_window2 = CreateWindowExW(WS_EX_TOPMOST, L"TelexE2EWindow", L"telex e2e #2",
+                                WS_OVERLAPPEDWINDOW, 100, 400, 640, 200, nullptr,
+                                nullptr, instance, nullptr);
+    if (!g_window2) return false;
+    g_edit2 = CreateWindowExW(0, L"EDIT", L"", WS_CHILD | WS_VISIBLE | ES_AUTOHSCROLL,
+                              10, 10, 600, 30, g_window2, nullptr, instance, nullptr);
+    if (!g_edit2) return false;
+    ShowWindow(g_window2, SW_SHOW);
+
+    if (!ForceForeground(g_window)) return false;
+    SetFocus(g_edit);
+    Pump(150);
+    return GetForegroundWindow() == g_window;
 }
 
 HWND FindTelexWindow() { return FindWindowW(L"TelexHiddenWindow", nullptr); }
@@ -245,10 +294,10 @@ void StopTelex() {
     }
     if (clean) {
         ++g_pass;
-        std::printf("  ok   9. shuts down cleanly on WM_CLOSE\n");
+        std::printf("  ok   12. shuts down cleanly on WM_CLOSE\n");
     } else {
         ++g_fail;
-        std::printf("  FAIL 9. did not shut down on WM_CLOSE\n");
+        std::printf("  FAIL 12. did not shut down on WM_CLOSE\n");
     }
 }
 
@@ -331,6 +380,82 @@ void ScenarioSoak() {
     Expect("8. hook still alive after sustained typing", "tiếng");
 }
 
+// Ctrl+A selects everything; the EDIT control replaces the whole selection
+// with the first key typed next. telex must have forgotten the old word by
+// then (docs/DESIGN.md, "Flow of a single keystroke", step 5) so the new word
+// composes on its own, not as a continuation of the one just erased.
+//
+// This bare-bones test window has no accelerator table, so a plain EDIT
+// control does not actually select on Ctrl+A the way a real application's
+// would (Notepad etc. wire that up themselves). The keystroke is still sent,
+// because that is what makes the hook take its Ctrl-chord reset path
+// (hook.cpp); EM_SETSEL reproduces the selection a real app would have made.
+void ScenarioSelectAllRetype() {
+    ClearEdit();
+    SendKeys("tieengs");  // "tiếng" on screen, word not yet ended
+    SendCtrlVk('A');
+    Pump(30);
+    SendMessageW(g_edit, EM_SETSEL, 0, -1);
+    Pump(30);
+    SendKeys("hoas");  // first key replaces the selection
+    Expect("9. select-all then retype composes fresh", "hóa");
+}
+
+// A selection spanning the whole word, then Backspace deletes it in one go,
+// same as any other application would. telex never finds out "how much" was
+// deleted — it only has to not be confused afterwards, because Home is a
+// boundary key and already resets it (hook.cpp) independently of whether the
+// key carries Shift. This bare test window has no accelerator table to turn
+// Shift+Home into a real selection the way a real application's message loop
+// would (same gap as Ctrl+A in scenario 9), so EM_SETSEL reproduces it; the
+// Home keypress is still sent for real, to exercise telex's own reset path.
+void ScenarioSelectionBackspace() {
+    ClearEdit();
+    SendKeys("tieengs");
+    SendVk(VK_HOME, false);
+    Pump(30);
+    SendMessageW(g_edit, EM_SETSEL, 0, -1);
+    Pump(30);
+    SendVk(VK_BACK, false);
+    Pump(30);
+    SendKeys("vieejt");
+    Expect("10. backspacing over a selection, then typing fresh", "việt");
+}
+
+// Half-type a word, switch the whole foreground window away (as Alt+Tab or a
+// taskbar click would), type something unrelated in the second window, then
+// switch back. The half-typed word must still be sitting there untouched (we
+// never asked telex to delete it) but telex's *memory* of it must be gone —
+// otherwise the next key could emit backspaces sized for a word that is no
+// longer what the caret is sitting after. This is the WinEventHook path in
+// hook.cpp / main.cpp, not the mouse-click or Ctrl-chord one.
+void ScenarioAppSwitch() {
+    ClearEdit();
+    SendKeys("tieengs");  // "tiếng" on screen in window 1, word not ended
+
+    if (!ForceForeground(g_window2)) {
+        ++g_fail;
+        std::printf("  FAIL 11. could not switch to the second window\n");
+        return;
+    }
+    ClearEdit(g_edit2);
+    SendKeys("vieejt");
+    Expect("11a. typing in the second window is unaffected", "việt", g_edit2);
+
+    if (!ForceForeground(g_window)) {
+        ++g_fail;
+        std::printf("  FAIL 11. could not switch back to the first window\n");
+        return;
+    }
+    SetFocus(g_edit);
+    Pump(150);
+    // If telex still thought "tiếng" was the live word, 's' here would emit a
+    // backspace count sized for it. It must instead treat 'a' then 's' as a
+    // brand new word appended after whatever is already on screen.
+    SendKeys("as");
+    Expect("11b. returning to the first window does not corrupt it", "tiếngá");
+}
+
 }  // namespace
 
 int wmain(int argc, wchar_t** argv) {
@@ -365,6 +490,9 @@ int wmain(int argc, wchar_t** argv) {
         {"backspace", ScenarioBackspace},
         {"burst", ScenarioBurst},
         {"soak", ScenarioSoak},
+        {"select-all retype", ScenarioSelectAllRetype},
+        {"selection backspace", ScenarioSelectionBackspace},
+        {"app switch", ScenarioAppSwitch},
     };
     for (const Step& step : steps) {
         g_stage = step.name;
@@ -375,6 +503,7 @@ int wmain(int argc, wchar_t** argv) {
     StopTelex();
     DeleteFileW(g_excludePath.c_str());
     DestroyWindow(g_window);
+    DestroyWindow(g_window2);
 
     std::printf("\n%d passed, %d failed\n", g_pass, g_fail);
     return g_fail == 0 ? 0 : 1;

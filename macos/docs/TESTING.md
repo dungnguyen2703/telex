@@ -88,7 +88,30 @@ difference shows up as a failure on one platform only:
    and the scenario still does what it is for: catching ordering races.
 8. Type continuously for several seconds, then type one more word → the tap is
    still alive, i.e. a `.tapDisabledByTimeout` was caught and re-enabled.
-9. Terminate the app → it exits on its own and the menu bar icon disappears.
+9. Cmd+A to select everything, then type a new word → the new word composes
+   from scratch, not as a continuation of the word it replaced. Exercises the
+   Command-chord reset path (`EventTap.swift`) together with a real selection.
+10. Type a word, select it, Delete to remove the selection in one go, then type
+    another word → the new word composes correctly. telex never learns "how
+    much" a selection-delete removed; it only has to not be confused
+    afterwards, because the key that made the selection was already a
+    boundary key or a Command chord, either of which resets it on its own.
+11. Half-type a word in one window, switch to a second window (a real click,
+    not just `makeKeyAndOrderFront`), type something else there, then switch
+    back → typing continues correctly in both windows, and the second
+    window's typing never bleeds into the first.
+    **Platform note:** unlike Windows, whose foreground-window detection
+    covers a window switch on its own, macOS's `didActivateApplicationNotification`
+    (`main.swift`) only fires on a change of *application* — switching between
+    two windows of the same app does not trigger it. What actually covers this
+    case is the mouseDown reset path (`EventTap.swift`), the same one a real
+    user's click hits when they switch windows. A window switch with **no**
+    click at all (e.g. a trackpad gesture or Mission Control with the pointer
+    never touching either window) is not covered by any reset path and is a
+    known gap — rare in practice, since composing text and then switching
+    windows without touching the mouse or a Cmd-chord is unusual, but worth
+    knowing about rather than assuming it is handled.
+12. Terminate the app → it exits on its own and the menu bar icon disappears.
 
 ## Tier 3 — Manual checklist
 

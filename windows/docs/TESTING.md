@@ -61,8 +61,24 @@ Required scenarios:
    (catches ordering races between real and injected keys).
 8. Type continuously for several seconds, then type one more word → the hook is
    still alive (Windows has not dropped it for exceeding the timeout).
-9. Post `WM_CLOSE` → the process exits on its own, meaning the message loop was
-   healthy and the teardown path (unhook, remove the tray icon) ran.
+9. Ctrl+A to select everything, then type a new word → the new word composes
+   from scratch (correct diacritics), not as a continuation of the word it
+   replaced. Exercises the Ctrl-chord reset path (hook.cpp) together with a
+   real selection.
+10. Type a word, Shift+Home to select it, Backspace to delete the selection in
+    one go, then type another word → the new word composes correctly. telex
+    never learns "how much" text a selection-backspace removed; it only has to
+    not be confused afterwards, because Home is a boundary key and already
+    resets it independently of Shift.
+11. Half-type a word in one window, switch the *foreground window* to a second,
+    unrelated window (as Alt+Tab or a taskbar click would — not a mouse click
+    inside the first window), type something else there, then switch back →
+    typing continues correctly in both windows, and the second window's typing
+    never bleeds into the first. Exercises the `WinEventHook` /
+    `EVENT_SYSTEM_FOREGROUND` reset path (main.cpp), the one path not covered
+    by scenarios 4-10.
+12. Post `WM_CLOSE` → the process exits on its own, meaning the message loop was
+    healthy and the teardown path (unhook, remove the tray icon) ran.
 
 The test program carries a watchdog that kills it, and any surviving telex.exe,
 after two minutes. Injecting global input can wedge if something steals the

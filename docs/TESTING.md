@@ -138,8 +138,21 @@ The mechanism differs per platform, but three requirements do not:
 Scenarios each platform must cover, at minimum: correct Vietnamese output;
 toggle off and on again; exclusion applied and then removed *without restarting*;
 backspace mid-word; a burst of ~200 characters with nothing lost or reordered;
-sustained typing without the interception being dropped; and a clean exit that
-leaves no icon behind.
+sustained typing without the interception being dropped; select-all (or a
+selection) followed by typing over it, composing fresh rather than continuing
+the erased word; a selection cleared with Backspace/Delete, then typing fresh;
+switching the foreground away mid-word and back, with no state leaking either
+direction; and a clean exit that leaves no icon behind.
+
+The selection and app-switch scenarios exist because telex never learns
+*what* got deleted or *why* the caret moved — see "The layering rule" and "Flow
+of a single keystroke" in [DESIGN.md](DESIGN.md). Every one of those scenarios
+is really testing the same thing: that some Reset()-triggering event (a
+modifier chord, a boundary key, a mouse click, or a foreground/app-activation
+change) already fired **before** the edit that would otherwise desync telex's
+memory from the screen. If a fresh implementation adds a way to move the caret
+or replace text that is not covered by one of those triggers, it needs its own
+new trigger, not a special case bolted onto Backspace.
 
 ## Tier 3 — Manual checklist
 

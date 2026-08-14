@@ -227,10 +227,120 @@ func scenarioSoak() {
     report("8. tap still alive after sustained typing", want: "tiếng", got: text())
 }
 
+// MARK: - Scenarios that exercise state invalidation (selection, app switch)
+//
+// These three mirror windows/tests/e2e_test.cpp scenarios 9-11. They were
+// written and reasoned through without access to a Mac to run them on, unlike
+// the rest of this file — verify them (and adjust the click coordinates in
+// scenarioAppSwitch if anything is covered by a real window on the test
+// machine) the first time this suite runs on real hardware.
+
+/// Cmd+A is a Command chord, so telex resets on it via EventTap's
+/// control/option/command branch (the same branch Ctrl+A hits on Windows).
+/// This bare test harness has no Edit menu, so the keystroke alone would not
+/// actually select anything the way it would in a real app; selectAll(_:) on
+/// the field editor reproduces the selection a real app's menu would have
+/// produced.
+func scenarioSelectAllRetype() {
+    clearField()
+    sendKeys("tieengs")  // "tiếng" on screen, word not yet ended
+    post(0, flags: .maskCommand, down: true)  // keycode 0 is 'a'
+    post(0, flags: .maskCommand, down: false)
+    pump(0.05)
+    field.currentEditor()?.selectAll(nil)
+    pump(0.05)
+    sendKeys("hoas")  // first key replaces the selection
+    report("9. select-all then retype composes fresh", want: "hóa", got: text())
+}
+
+/// Home is a boundary key (EventTap.swift, boundaryKeys), so telex resets on
+/// it regardless of whether Shift is held — same reasoning as scenario 9.
+func scenarioSelectionBackspace() {
+    clearField()
+    sendKeys("tieengs")
+    let kVKHome: CGKeyCode = 115
+    post(kVKHome, down: true)
+    post(kVKHome, down: false)
+    pump(0.05)
+    if let editor = field.currentEditor() {
+        editor.selectedRange = NSRange(location: 0, length: (editor.string as NSString).length)
+    }
+    pump(0.05)
+    post(kVKDelete, down: true)
+    post(kVKDelete, down: false)
+    pump(0.05)
+    sendKeys("vieejt")
+    report("10. backspacing over a selection, then typing fresh", want: "việt", got: text())
+}
+
+var window2: NSWindow!
+var field2: NSTextField!
+
+func makeWindow2() {
+    window2 = NSWindow(contentRect: NSRect(x: 200, y: 200, width: 520, height: 90),
+                       styleMask: [.titled], backing: .buffered, defer: false)
+    window2.title = "telex e2e #2"
+    field2 = NSTextField(frame: NSRect(x: 12, y: 20, width: 496, height: 32))
+    field2.isEditable = true
+    window2.contentView?.addSubview(field2)
+}
+
+/// A real left-click anywhere on screen, purely to drive telex's own mouseDown
+/// reset path (EventTap.swift) — the tap is session-wide, so the click does
+/// not need to land on either test window to have that effect.
+func clickToTriggerReset() {
+    let point = CGPoint(x: 40, y: 700)  // an out-of-the-way spot near the bottom
+    let down = CGEvent(mouseEventSource: nil, mouseType: .leftMouseDown,
+                       mouseCursorPosition: point, mouseButton: .left)
+    let up = CGEvent(mouseEventSource: nil, mouseType: .leftMouseUp,
+                     mouseCursorPosition: point, mouseButton: .left)
+    down?.post(tap: .cgSessionEventTap)
+    up?.post(tap: .cgSessionEventTap)
+    pump(0.1)
+}
+
+/// Half-type a word, switch to a second window and type something unrelated,
+/// then switch back — the half-typed word must still be sitting in window 1
+/// untouched (nothing asked telex to delete it) but telex's *memory* of it
+/// must be gone, otherwise the next key in window 1 could emit a backspace
+/// count sized for a word that is no longer what the caret is after.
+///
+/// Windows detects this by a foreground-window change alone, even between two
+/// windows of the *same* process. On macOS, NSWorkspace's
+/// didActivateApplicationNotification (main.swift) only fires on a change of
+/// *application* — switching between two windows of this same test process
+/// does not trigger it. What actually covers this case here is the mouseDown
+/// reset path (EventTap.swift), same as a real user clicking to switch
+/// windows would hit; clickToTriggerReset() stands in for that click.
+func scenarioAppSwitch() {
+    clearField()
+    sendKeys("tieengs")  // "tiếng" on screen in window 1, word not ended
+
+    window2.makeKeyAndOrderFront(nil)
+    clickToTriggerReset()
+    window2.makeFirstResponder(field2)
+    pump(0.15)
+    field2.stringValue = ""
+    sendKeys("vieejt")
+    report("11a. typing in the second window is unaffected",
+           want: "việt", got: field2.stringValue)
+
+    window.makeKeyAndOrderFront(nil)
+    clickToTriggerReset()
+    window.makeFirstResponder(field)
+    pump(0.15)
+    // If telex still thought "tiếng" was the live word, 's' here would emit a
+    // backspace count sized for it. It must instead treat 'a' then 's' as a
+    // brand new word appended after whatever is already on screen.
+    sendKeys("as")
+    report("11b. returning to the first window does not corrupt it",
+           want: "tiếngá", got: text())
+}
+
 func scenarioShutdown() {
     guard let app = runningTelex() else {
         failCount += 1
-        print("  FAIL 9. telex was not running at shutdown")
+        print("  FAIL 12. telex was not running at shutdown")
         return
     }
     app.terminate()
@@ -238,10 +348,10 @@ func scenarioShutdown() {
     while Date() < deadline, !app.isTerminated { pump(0.1) }
     if app.isTerminated {
         passCount += 1
-        print("  ok   9. shuts down cleanly")
+        print("  ok   12. shuts down cleanly")
     } else {
         failCount += 1
-        print("  FAIL 9. did not shut down")
+        print("  FAIL 12. did not shut down")
         app.forceTerminate()
     }
 }
@@ -300,6 +410,7 @@ guard runningTelex() != nil else {
 
 stage = "creating the test window"
 makeWindow()
+makeWindow2()
 
 let steps: [(String, () -> Void)] = [
     ("typing", scenarioTyping),
@@ -310,6 +421,9 @@ let steps: [(String, () -> Void)] = [
     ("backspace", scenarioBackspace),
     ("burst", scenarioBurst),
     ("soak", scenarioSoak),
+    ("select-all retype", scenarioSelectAllRetype),
+    ("selection backspace", scenarioSelectionBackspace),
+    ("app switch", scenarioAppSwitch),
     ("shutdown", scenarioShutdown),
 ]
 
