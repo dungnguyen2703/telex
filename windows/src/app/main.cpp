@@ -39,6 +39,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 
         case WM_COMMAND:
             if (LOWORD(wParam) == kMenuExclusions) OpenExclusionFile();
+            if (LOWORD(wParam) == kMenuAutoStart) SetAutoStartEnabled(!IsAutoStartEnabled());
             if (LOWORD(wParam) == kMenuExit) DestroyWindow(hwnd);
             return 0;
 

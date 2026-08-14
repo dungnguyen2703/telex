@@ -22,6 +22,7 @@ constexpr wchar_t kWindowClass[] = L"TelexHiddenWindow";
 
 constexpr UINT kMenuExclusions = 100;
 constexpr UINT kMenuExit = 101;
+constexpr UINT kMenuAutoStart = 102;
 
 // --- state (main.cpp) -------------------------------------------------------
 bool IsEnabled();
@@ -55,5 +56,11 @@ void RefreshExclusion();
 bool IsExcluded();
 void OpenExclusionFile();
 std::wstring ExclusionPath();
+
+// --- autostart.cpp -----------------------------------------------------
+// A single value under HKCU\...\Run pointing at the running exe. No service,
+// no scheduled task, no elevation needed.
+bool IsAutoStartEnabled();
+void SetAutoStartEnabled(bool on);
 
 }  // namespace app

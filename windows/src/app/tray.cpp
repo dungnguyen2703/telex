@@ -57,6 +57,8 @@ void ShowTrayMenu(HWND owner) {
     HMENU menu = CreatePopupMenu();
     if (!menu) return;
     AppendMenuW(menu, MF_STRING, kMenuExclusions, L"Open exclusion list");
+    UINT autoStartFlags = MF_STRING | (IsAutoStartEnabled() ? MF_CHECKED : MF_UNCHECKED);
+    AppendMenuW(menu, autoStartFlags, kMenuAutoStart, L"Start with Windows");
     AppendMenuW(menu, MF_SEPARATOR, 0, nullptr);
     AppendMenuW(menu, MF_STRING, kMenuExit, L"Exit");
 

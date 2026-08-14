@@ -84,6 +84,10 @@ type a sentence containing `đ`, hit Backspace mid-word, press `Alt + Z` twice.
 - [ ] The Start Menu search box
 - [ ] An app running elevated → confirm it does not work (known limitation,
       documented in the README)
+- [ ] Right-click the tray icon, check *Start with Windows* → a `telex` value
+      appears under `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`
+      pointing at the running exe; uncheck it → the value is gone; sign out and
+      back in (or reboot) with it checked → telex is running afterwards
 
 ## Leak check
 

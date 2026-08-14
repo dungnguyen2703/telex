@@ -10,6 +10,14 @@ real keyboard. Changing this code to accommodate the macOS port, or to share
 anything with it, is not allowed — the macOS build is a separate implementation
 for exactly that reason.
 
+**Deviation from the shared scope note:** [docs/DESIGN.md](../../docs/DESIGN.md)
+lists "no run-at-startup" as out of scope for both builds. The Windows build
+ships one anyway (`src/app/autostart.cpp`, a single value under `HKCU\...\Run`,
+toggled from the tray menu), by explicit user request. It is not persisted state
+about *how* telex behaves (that rule still holds — always starts ON, no config
+file) — it only controls whether Windows launches the exe at logon. macOS does
+not have this menu item; do not add it there without the same explicit request.
+
 ## Choices
 
 | Item | Choice | Why |
@@ -45,6 +53,7 @@ src/
     tray.cpp            Shell_NotifyIcon, context menu
     icon.cpp/.h         draws the ON/OFF icons with GDI, no binary assets
     exclusion.cpp       reads exclude.txt, resolves foreground process name
+    autostart.cpp       HKCU Run key toggle for "Start with Windows"
 tests/
   engine_tests.cpp   <- tier 1, runs against the engine, no Windows needed
   e2e_test.cpp       <- tier 2, injects keys into an EDIT control, reads back
@@ -150,8 +159,9 @@ specifics:
   `macos/Tools/makeicon.swift` from the same artwork, so both platforms show the
   same icon; it is committed because the Windows machine has no Swift toolchain.
   Do not hand-edit it.
-- Left click toggles ON/OFF. Right click opens a two-item menu: *Open exclusion
-  list* and *Exit*.
+- Left click toggles ON/OFF. Right click opens a menu: *Open exclusion list*,
+  *Start with Windows* (checkbox, reflects the current `HKCU\...\Run` state),
+  and *Exit*.
 - Re-register the icon on the `TaskbarCreated` broadcast — Explorer restarts and
   forgets about us. This is why the app owns a real (never shown) window rather
   than a message-only one: message-only windows do not receive that broadcast.

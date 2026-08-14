@@ -40,7 +40,8 @@ hệt nhau.
   gốc y như khi đang tắt. Rời khỏi ứng dụng đó thì bộ gõ hoạt động lại bình
   thường. Sửa file xong là có hiệu lực ngay, không cần khởi động lại.
 - **Icon khay hệ thống**: nhìn vào là biết đang bật hay tắt. Nhấp chuột vào icon
-  cũng bật/tắt được. Menu có hai mục: mở danh sách loại trừ, và thoát.
+  cũng bật/tắt được. Menu có các mục: mở danh sách loại trừ, khởi động cùng
+  Windows (riêng bản Windows, xem bên dưới), và thoát.
 - **Unicode dựng sẵn**: đầu ra luôn là Unicode, không có lựa chọn nào khác.
 
 ### Không có
@@ -51,7 +52,9 @@ hệt nhau.
 - Không có bảng gõ tắt, không có macro, không có kiểm tra chính tả.
 - Không có chuyển mã clipboard.
 - Không có tùy chọn đổi phím tắt.
-- Không tự khởi động cùng máy (người dùng tự thêm nếu muốn).
+- Không tự khởi động cùng máy trên macOS (người dùng tự thêm nếu muốn). Riêng
+  Windows có tùy chọn này trong menu khay hệ thống — xem "Riêng Windows" bên
+  dưới.
 
 ## Giới hạn đã biết
 
@@ -72,6 +75,9 @@ Riêng Windows:
 - Phím tắt là **`Alt + Z`**.
 - **Cửa sổ chạy quyền admin không gõ được** nếu telex chạy quyền thường. Đây là
   giới hạn của Windows, muốn dùng thì chạy telex bằng quyền admin.
+- **Khởi động cùng Windows**: chuột phải vào icon khay hệ thống, chọn *Start
+  with Windows* để bật/tắt. Chỉ thêm một khoá trong
+  `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`, không cài đặt gì thêm.
 
 Riêng macOS:
 

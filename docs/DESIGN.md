@@ -252,3 +252,11 @@ The one sanctioned exception is a platform *requirement* rather than a feature:
 macOS cannot intercept keys at all without the user granting Accessibility
 permission, so that build has to ask for it. See
 [macos/docs/DESIGN.md](../macos/docs/DESIGN.md).
+
+**Windows-only exception:** "Start with Windows" (a tray menu checkbox backed by
+a single `HKCU\...\Run` value) was added to the Windows build by explicit
+request, in deviation from the list above. It does not touch persisted
+*behaviour* state (still always starts ON, no config file) — only whether
+Windows launches the exe at logon. See
+[windows/docs/DESIGN.md](../windows/docs/DESIGN.md). macOS does not have this
+item; do not add it there without the same explicit request.

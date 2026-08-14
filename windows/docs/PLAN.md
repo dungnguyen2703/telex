@@ -5,6 +5,13 @@ This file is kept as the record of how the build was put together and what
 "done" was measured against — the macOS port follows its own plan in
 [macos/docs/PLAN.md](../../macos/docs/PLAN.md).
 
+**Post-ship addition (2026-08-14):** "Start with Windows" (`src/app/autostart.cpp`,
+a tray menu checkbox backed by `HKCU\...\Run`) was added on explicit request,
+as a deliberate deviation from the shared *Out of scope* list — see
+[DESIGN.md](DESIGN.md). Same build, same tiers; no new step number since the
+existing Step 7/9 loop (tray menu, done-when checked manually) already covers
+how a new menu item gets verified.
+
 The order mattered: each step's tests were green before the next one started.
 Don't build the platform layer first and come back to fix the engine later.
 
