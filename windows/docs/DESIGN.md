@@ -13,10 +13,10 @@ for exactly that reason.
 **Deviation from the shared scope note:** [docs/DESIGN.md](../../docs/DESIGN.md)
 lists "no run-at-startup" as out of scope for both builds. The Windows build
 ships one anyway (`src/app/autostart.cpp`, a single value under `HKCU\...\Run`,
-toggled from the tray menu), by explicit user request. It is not persisted state
-about *how* telex behaves (that rule still holds — always starts ON, no config
-file) — it only controls whether Windows launches the exe at logon. macOS does
-not have this menu item; do not add it there without the same explicit request.
+toggled from the tray menu), by explicit user request — macOS is getting the
+same toggle later, see the shared doc. It is not persisted state about *how*
+telex behaves (that rule still holds — always starts ON, no config file) — it
+only controls whether Windows launches the exe at logon.
 
 ## Choices
 

@@ -52,9 +52,8 @@ hệt nhau.
 - Không có bảng gõ tắt, không có macro, không có kiểm tra chính tả.
 - Không có chuyển mã clipboard.
 - Không có tùy chọn đổi phím tắt.
-- Không tự khởi động cùng máy trên macOS (người dùng tự thêm nếu muốn). Riêng
-  Windows có tùy chọn này trong menu khay hệ thống — xem "Riêng Windows" bên
-  dưới.
+- Windows đã có tùy chọn tự khởi động cùng máy trong menu khay hệ thống — xem
+  "Riêng Windows" bên dưới. macOS sẽ có sau, hiện chưa làm.
 
 ## Giới hạn đã biết
 

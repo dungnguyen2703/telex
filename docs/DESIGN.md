@@ -253,10 +253,10 @@ macOS cannot intercept keys at all without the user granting Accessibility
 permission, so that build has to ask for it. See
 [macos/docs/DESIGN.md](../macos/docs/DESIGN.md).
 
-**Windows-only exception:** "Start with Windows" (a tray menu checkbox backed by
-a single `HKCU\...\Run` value) was added to the Windows build by explicit
-request, in deviation from the list above. It does not touch persisted
-*behaviour* state (still always starts ON, no config file) — only whether
-Windows launches the exe at logon. See
-[windows/docs/DESIGN.md](../windows/docs/DESIGN.md). macOS does not have this
-item; do not add it there without the same explicit request.
+**Run-at-startup exception:** by explicit request, both builds are getting a
+"launch at login" toggle in their tray/menu-bar menu, in deviation from the
+list above. It does not touch persisted *behaviour* state (still always starts
+ON, no config file) — only whether the OS launches the app at logon. Windows is
+done first (`HKCU\...\Run`, see [windows/docs/DESIGN.md](../windows/docs/DESIGN.md));
+macOS (`SMAppService` / a login item) is planned but not implemented yet — see
+[macos/docs/DESIGN.md](../macos/docs/DESIGN.md) once it lands.
